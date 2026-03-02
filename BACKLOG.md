@@ -1,7 +1,7 @@
 # Serbisyo Agile Backlog
 
 Last updated: 2026-03-02  
-Source of truth: `PRD.md`
+Source of truth: `PRD.md`, `DB_SCHEMA.md`
 
 ## 1) Backlog Model
 
@@ -16,6 +16,12 @@ Source of truth: `PRD.md`
 ### Estimation Model
 - **Story Points (SP)**: 1, 2, 3, 5, 8, 13
 - **Effort**: S / M / L
+
+### Schema Alignment Rules (`DB_SCHEMA.md`)
+- `Users` is multi-role via booleans (`is_customer`, `is_provider`, `is_admin`) plus optional `admin_role`.
+- `Bookings` is the transactional anchor and includes `payment_id` + `payment_method`.
+- `Payments`, `Messages`, `Reviews`, and `Admin Logs` are first-class entities.
+- Messaging is **booking-linked** (`booking_id`, `sender_id`, `receiver_id`) with `flagged` moderation state.
 
 ### Definition of Done (global)
 - Acceptance criteria met and validated.
@@ -60,8 +66,9 @@ Source of truth: `PRD.md`
     - Unauthorized route attempts return `403`.
     - Mobile hides role-incompatible actions.
     - Superadmin endpoints inaccessible to non-admin users.
+    - Multi-role accounts are supported using `is_customer`, `is_provider`, `is_admin`, and optional `admin_role`.
   - Tasks:
-    - Create role permission matrix.
+    - Create permission matrix mapped to `Users` role booleans + `admin_role`.
     - Enforce RBAC middleware by route group.
     - Implement role-aware navigation guards in app.
 
@@ -98,7 +105,7 @@ Source of truth: `PRD.md`
     - Fallback message appears when no provider is available.
   - Tasks:
     - Define geolocation payload and distance calculation approach.
-    - Add provider service radius and availability checks.
+    - Use `Users.address.coordinates` and provider availability checks.
     - Build mobile location permission and nearest-match UX.
 
 ## Initiative M-I03: Booking and Fulfillment
@@ -114,11 +121,12 @@ Source of truth: `PRD.md`
   - Dependencies: BE-S05, MB-S05
   - Acceptance Criteria:
     - Booking form validates schedule/service inputs.
-    - Booking status lifecycle exists (`pending/accepted/completed/cancelled`).
+    - Booking status lifecycle exists (`pending/accepted/rejected/completed/cancelled`).
     - Customer and provider both see booking details.
   - Tasks:
     - Normalize booking status transitions.
     - Add schedule conflict validation.
+    - Persist `payment_method` on booking creation/update.
     - Add booking detail and timeline UI.
 
 #### Feature M-F06: Provider booking operations
@@ -150,10 +158,11 @@ Source of truth: `PRD.md`
   - Dependencies: BE-S07, MB-S07
   - Acceptance Criteria:
     - Sandbox payment flow succeeds for at least one gateway.
-    - Booking marked as paid only after verified callback/webhook.
+    - Payment record (`Payments`) is created with `booking_id`, `method`, `status`, and `transaction_reference`.
+    - Booking `payment_id` is linked and booking marked as paid only after verified callback/webhook.
     - Failed and cancelled payments are recoverable.
   - Tasks:
-    - Implement payment intent/create endpoint.
+    - Implement payment create endpoint producing persisted `Payments` record.
     - Validate webhook signatures and idempotency.
     - Build mobile payment handoff + result handling.
 
@@ -185,12 +194,12 @@ Source of truth: `PRD.md`
   - Owner: Fullstack
   - Dependencies: BE-S09, MB-S08
   - Acceptance Criteria:
-    - Threaded messaging works for booking participants only.
+    - Booking-linked messaging works for booking participants only.
     - Rule-based prohibited-topic detection is applied in real time.
-    - Flagged content is either blocked or masked based on severity.
+    - `Messages.flagged` is set for prohibited content and policy action is applied.
   - Tasks:
     - Finalize prohibited term dictionary and normalization.
-    - Add moderation status on message records.
+    - Persist `booking_id`, `sender_id`, `receiver_id`, and `flagged` on messages.
     - Surface warning UI in message composer.
 
 #### Feature M-F10: Ratings and reviews
@@ -205,9 +214,9 @@ Source of truth: `PRD.md`
     - Provider aggregate rating updates correctly.
     - Abuse/report workflow available to superadmin.
   - Tasks:
-    - Add review schema and booking linkage validation.
+    - Add `Reviews` schema (`booking_id`, `customer_id`, `provider_id`, `rating`, `comment`) and booking linkage validation.
     - Build post-completion review prompt UI.
-    - Add admin report/review moderation APIs.
+    - Update `Users.ratings` aggregate for provider accounts.
 
 ## Initiative M-I06: Admin Visibility and Control
 
@@ -226,7 +235,7 @@ Source of truth: `PRD.md`
     - Flagged messages and payment violations are actionable.
   - Tasks:
     - Build admin endpoints for user/provider moderation.
-    - Add audit trail model and API responses.
+    - Add `Admin Logs` model and API responses.
     - Provide management-ready export/report data.
 
 #### Feature M-F12: Revenue and usage analytics
@@ -295,9 +304,10 @@ Source of truth: `PRD.md`
   - Acceptance Criteria:
     - Non-provider cannot access provider management screens.
     - Role mismatch shows graceful denial UI.
+    - Multi-role users can switch experiences without re-authentication.
   - Tasks:
     - Add route guards in app router.
-    - Update bottom navigation per role.
+    - Update bottom navigation based on `is_customer` / `is_provider` / `is_admin`.
     - Add forbidden-state component.
 
 ## Epic MB-E02: Search and Discovery UX
@@ -412,10 +422,10 @@ Source of truth: `PRD.md`
   - Effort: M
   - Depends on: M-S09
   - Acceptance Criteria:
-    - Thread list and thread detail are consistent after send.
+    - Booking-linked conversation list and detail are consistent after send.
     - Pending/send-failed states are visible.
   - Tasks:
-    - Add optimistic message bubble states.
+    - Add optimistic message bubble states with `flagged` message rendering.
     - Add retry flow for failed sends.
     - Improve unread/thread sorting behavior.
 
@@ -467,7 +477,7 @@ Source of truth: `PRD.md`
   - Tasks:
     - Add OAuth provider strategy and callback endpoint.
     - Normalize auth response payload.
-    - Add provider account linkage in user model.
+    - Add provider account linkage in `Users` model using role booleans and optional `admin_role`.
 
 ### Feature BE-F02: Permission matrix enforcement
 - **Story BE-S02**: Enforce route-level RBAC for customer/provider/superadmin.
@@ -476,7 +486,7 @@ Source of truth: `PRD.md`
   - Effort: M
   - Depends on: M-S02
   - Acceptance Criteria:
-    - All protected endpoints mapped to explicit permissions.
+    - All protected endpoints mapped to explicit permissions based on `is_customer` / `is_provider` / `is_admin` + `admin_role`.
     - Unauthorized requests are denied and audited.
   - Tasks:
     - Expand RBAC middleware with role scopes.
@@ -509,7 +519,7 @@ Source of truth: `PRD.md`
     - Endpoint ranks candidates by distance then availability.
     - Supports service-type filtering and radius cap.
   - Tasks:
-    - Add provider location and radius fields.
+    - Use `Users.address.coordinates` for provider/customer geolocation queries.
     - Implement geo query + ranking function.
     - Add no-candidate fallback response contract.
 
@@ -525,7 +535,7 @@ Source of truth: `PRD.md`
     - Invalid status transitions are rejected.
     - Provider schedule conflicts are blocked.
   - Tasks:
-    - Add transition rules for booking statuses.
+    - Add transition rules for `pending`, `accepted`, `rejected`, `completed`, `cancelled`.
     - Add schedule overlap checks.
     - Emit booking state change events/logs.
 
@@ -554,9 +564,9 @@ Source of truth: `PRD.md`
   - Acceptance Criteria:
     - Payment create/confirm/cancel endpoints work in sandbox.
     - Webhook validation prevents spoofed updates.
-    - Booking payment state is idempotent.
+    - `Bookings.payment_id` and `Bookings.payment_method` are set consistently and idempotently.
   - Tasks:
-    - Add payment intent/create endpoint.
+    - Add payment create endpoint persisting `Payments` (`booking_id`, `amount`, `currency`, `method`, `status`, `transaction_reference`).
     - Add webhook handler with signature check.
     - Add idempotency key handling and retries.
 
@@ -567,10 +577,10 @@ Source of truth: `PRD.md`
   - Effort: L
   - Depends on: M-S07
   - Acceptance Criteria:
-    - Transaction records include status history.
+    - `Payments` records include status history transitions (`pending`, `paid`, `refunded`).
     - Reconciliation job fixes drifted states.
   - Tasks:
-    - Add transaction model and indexes.
+    - Add/extend `Payments` indexes and reconciliation fields.
     - Implement reconciliation endpoint/job.
     - Add admin-facing transaction filters.
 
@@ -584,10 +594,10 @@ Source of truth: `PRD.md`
   - Depends on: M-S09
   - Acceptance Criteria:
     - Non-participants cannot access/send in thread.
-    - Message write path stores moderation status.
+    - Message write path stores `booking_id`, `sender_id`, `receiver_id`, and `flagged` status.
   - Tasks:
-    - Validate booking-user membership per thread.
-    - Persist moderation metadata on each message.
+    - Validate booking-user membership for every booking-linked message.
+    - Persist moderation metadata on each `Messages` record.
     - Add send throttling to reduce abuse.
 
 ### Feature BE-F10: Prohibited-topic detection and enforcement
@@ -595,7 +605,7 @@ Source of truth: `PRD.md`
   - Priority: P0
   - SP: 8
   - Effort: L
-  - Depends on: M-S08, M-S08
+  - Depends on: M-S08
   - Acceptance Criteria:
     - Message content normalized and scanned against rule set.
     - Rules support warning/block/escalate actions.
@@ -615,9 +625,9 @@ Source of truth: `PRD.md`
     - Review creation allowed once per completed booking.
     - Provider rating aggregates update atomically.
   - Tasks:
-    - Add review model and booking uniqueness constraint.
+    - Add `Reviews` model and booking uniqueness constraint.
     - Add create/list review endpoints.
-    - Update provider profile aggregate fields.
+    - Update provider aggregate in `Users.ratings`.
 
 ## Epic BE-E06: Superadmin Operations and Analytics
 
@@ -633,7 +643,24 @@ Source of truth: `PRD.md`
   - Tasks:
     - Add `/admin` route group with superadmin guard.
     - Implement list/filter/update actions.
-    - Add audit model for admin actions.
+    - Add `Admin Logs` writes for every admin action.
+
+## Epic BE-E08: DB Schema Conformance
+
+### Feature BE-F15: Model and migration alignment with `DB_SCHEMA.md`
+- **Story BE-S15**: Align backend models and persistence layer with approved schema entities and field names.
+  - Priority: P0
+  - SP: 8
+  - Effort: L
+  - Depends on: M-S02, M-S05, M-S07, M-S09, M-S10, M-S11
+  - Acceptance Criteria:
+    - `Users`, `Services`, `Bookings`, `Payments`, `Messages`, `Reviews`, `Admin Logs` exist with required fields.
+    - Legacy model naming mismatches are mapped/migrated without data loss.
+    - Foreign-key/reference integrity is enforced at application level.
+  - Tasks:
+    - Build field-mapping matrix old-model-to-new-schema.
+    - Add migration scripts/backfill for renamed or split entities.
+    - Validate indexes and unique constraints from schema requirements.
 
 ### Feature BE-F13: KPI and reporting endpoints
 - **Story BE-S13**: Implement analytics endpoints for bookings, revenue, and activity.
@@ -673,7 +700,7 @@ Source of truth: `PRD.md`
 ### P0 (Execute First)
 - M-S01, M-S02, M-S03, M-S04, M-S05, M-S06, M-S07, M-S09, M-S13
 - Mobile focus: MB-S01, MB-S02, MB-S03, MB-S04, MB-S05, MB-S06, MB-S07, MB-S10, MB-S12
-- Backend focus: BE-S01, BE-S02, BE-S03, BE-S04, BE-S05, BE-S06, BE-S07, BE-S09, BE-S10, BE-S14
+- Backend focus: BE-S01, BE-S02, BE-S03, BE-S04, BE-S05, BE-S06, BE-S07, BE-S09, BE-S10, BE-S14, BE-S15
 
 ### P1 (Execute Second)
 - M-S08, M-S10, M-S11, M-S12
@@ -693,7 +720,24 @@ Source of truth: `PRD.md`
 - **Security risk**: Payment/webhook validation and RBAC gaps are high impact.
 - **Data quality risk**: Rating and booking status integrity must be transaction-safe.
 
-## 7) Backlog Maintenance Rules
+## 7) DB Schema ↔ Backlog Traceability Matrix
+
+| DB Entity (`DB_SCHEMA.md`) | Core Fields/Constraints | Master Stories | Mobile Stories | Backend Stories | Notes |
+|---|---|---|---|---|---|
+| `Users` | Multi-role booleans (`is_customer`, `is_provider`, `is_admin`), `admin_role`, profile/address/coordinates, `ratings` | M-S01, M-S02, M-S04, M-S10, M-S11 | MB-S01, MB-S02, MB-S04, MB-S11 | BE-S01, BE-S02, BE-S04, BE-S11, BE-S12, BE-S15 | Role switching and provider activation must preserve single-account model. |
+| `Services` | `name`, `description`, `category`, `base_price` | M-S03, M-S05, M-S11 | MB-S03, MB-S05 | BE-S03, BE-S12, BE-S15 | Search/filter and booking contracts must share stable service identifiers. |
+| `Bookings` | `customer_id`, `provider_id`, `service_id`, statuses (`pending/accepted/rejected/completed/cancelled`), schedule/location, payment linkage | M-S04, M-S05, M-S06, M-S07 | MB-S04, MB-S05, MB-S06, MB-S07 | BE-S04, BE-S05, BE-S06, BE-S07, BE-S15 | Booking is transactional anchor for messaging, reviews, and payments. |
+| `Payments` | `booking_id`, `amount`, `currency`, `method`, `status`, `transaction_reference` | M-S07, M-S12 | MB-S07, MB-S09 | BE-S07, BE-S08, BE-S13, BE-S15 | Idempotency and reconciliation are required for demo-safe payment behavior. |
+| `Messages` | Booking-linked (`booking_id`), sender/receiver refs, `content`, `flagged` | M-S08, M-S09, M-S11 | MB-S08, MB-S10 | BE-S09, BE-S10, BE-S12, BE-S15 | Moderation decisions must map to `flagged` and admin review flows. |
+| `Reviews` | One review per booking intent, `rating` 1-5, provider/customer linkage | M-S10, M-S12 | MB-S11 | BE-S11, BE-S13, BE-S15 | Provider aggregate score updates through `Users.ratings`. |
+| `Admin Logs` | `action`, `performed_by`, `details`, timestamp | M-S11, M-S12 | (N/A) | BE-S12, BE-S13, BE-S15 | Required for auditable moderation and finance actions. |
+
+### Coverage Check
+- All schema entities have at least one Master and one Backend story mapping.
+- Mobile backlog intentionally has no direct CRUD for `Admin Logs`; admin observability remains backend/API scoped for MVP.
+- BE-S15 is the conformance umbrella story for migration, field mapping, and integrity validation.
+
+## 8) Backlog Maintenance Rules
 
 - Every story must link to one feature and one owner section (Master/Mobile/Backend).
 - Re-estimate stories if scope changes by >20%.
