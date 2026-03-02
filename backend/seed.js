@@ -1,16 +1,9 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Role = require('./models/Role');
 const User = require('./models/User');
 const ServiceCategory = require('./models/ServiceCategory');
 const Service = require('./models/Service');
 const { connectDB } = require('./config/db');
-
-const roles = [
-  { name: 'Customer', slug: 'customer' },
-  { name: 'Provider', slug: 'provider' },
-  { name: 'Admin', slug: 'admin' },
-];
 
 const categories = [
   { name: 'Plumbing', assetImagePath: 'assets/images/placeholders/placeholder.png' },
@@ -142,25 +135,107 @@ const hosts = [
   { email: 'host.serenity@serbisyo.demo', password: 'demo1234', fullName: 'Serenity Spa', providerName: 'Serenity Spa', serviceIndexes: [7] },
 ];
 
+const schemaCollections = ['payments', 'reviews', 'messages', 'adminlogs'];
+
+async function ensureSchemaCollections() {
+  const existing = await mongoose.connection.db.listCollections().toArray();
+  const existingNames = new Set(existing.map((item) => item.name));
+  for (const collectionName of schemaCollections) {
+    if (!existingNames.has(collectionName)) {
+      await mongoose.connection.createCollection(collectionName);
+    }
+  }
+}
+
+async function backfillUsersSchemaFields() {
+  const usersCollection = mongoose.connection.collection('users');
+  const users = await usersCollection.find({}).toArray();
+  if (!users.length) return;
+
+  const ops = users.map((user) => {
+    const hasAddress = user.address && typeof user.address === 'object';
+    return {
+      updateOne: {
+        filter: { _id: user._id },
+        update: {
+          $set: {
+            name: user.name || user.fullName || user.email,
+            password_hash: user.password_hash || user.password || null,
+            phone: user.phone || '',
+            address: hasAddress ? user.address : {
+              street: '',
+              city: '',
+              province: '',
+              coordinates: [0, 0],
+            },
+            profile_picture: user.profile_picture || null,
+            ratings: typeof user.ratings === 'number' ? user.ratings : 0,
+            created_at: user.created_at || user.createdAt || new Date(),
+            updated_at: user.updated_at || user.updatedAt || new Date(),
+            admin_role: user.admin_role ?? null,
+            is_customer: !!user.is_customer,
+            is_provider: !!user.is_provider,
+            is_admin: !!user.is_admin,
+          },
+        },
+      },
+    };
+  });
+
+  await usersCollection.bulkWrite(ops, { ordered: false });
+}
+
+async function backfillServicesSchemaFields() {
+  const servicesCollection = mongoose.connection.collection('services');
+  const categories = await ServiceCategory.find({}).lean();
+  const categoryNameById = new Map(categories.map((category) => [category._id.toString(), category.name]));
+
+  const servicesDocs = await servicesCollection.find({}).toArray();
+  if (!servicesDocs.length) return;
+
+  const ops = servicesDocs.map((serviceDoc) => ({
+    updateOne: {
+      filter: { _id: serviceDoc._id },
+      update: {
+        $set: {
+          name: serviceDoc.name || serviceDoc.title,
+          category: serviceDoc.category || categoryNameById.get(serviceDoc.categoryId?.toString?.()) || null,
+          base_price: Number(serviceDoc.base_price ?? serviceDoc.pricePerHour ?? 0),
+          created_at: serviceDoc.created_at || serviceDoc.createdAt || new Date(),
+          updated_at: serviceDoc.updated_at || serviceDoc.updatedAt || new Date(),
+        },
+      },
+    },
+  }));
+
+  await servicesCollection.bulkWrite(ops, { ordered: false });
+}
+
 async function seed() {
   await connectDB();
+  await ensureSchemaCollections();
 
-  // Seed roles (upsert by slug so we don't duplicate)
-  for (const r of roles) {
-    await Role.findOneAndUpdate({ slug: r.slug }, r, { upsert: true, new: true });
-  }
-  console.log('Seeded roles:', roles.map(r => r.slug).join(', '));
+  // Ensure boolean role flags exist for all users.
+  await User.updateMany(
+    { is_customer: { $exists: false } },
+    { $set: { is_customer: true } }
+  );
+  await User.updateMany(
+    { is_provider: { $exists: false } },
+    { $set: { is_provider: false } }
+  );
+  await User.updateMany(
+    { is_admin: { $exists: false } },
+    { $set: { is_admin: false } }
+  );
 
-  // Migrate existing users without roleId to customer role
-  const customerRole = await Role.findOne({ slug: 'customer' });
-  if (customerRole) {
-    const updated = await User.updateMany(
-      { roleId: { $exists: false } },
-      { $set: { roleId: customerRole._id } }
+  // Legacy migration: map old roleId/provider role documents to is_provider=true.
+  const providerRole = await mongoose.connection.collection('roles').findOne({ slug: 'provider' });
+  if (providerRole?._id) {
+    await mongoose.connection.collection('users').updateMany(
+      { roleId: providerRole._id },
+      { $set: { is_provider: true, is_customer: true } }
     );
-    if (updated.modifiedCount > 0 || updated.matchedCount > 0) {
-      console.log('Updated existing users with customer role:', updated.matchedCount);
-    }
   }
 
   await ServiceCategory.deleteMany({});
@@ -169,23 +244,21 @@ async function seed() {
   const catMap = {};
   inserted.forEach(c => { catMap[c.name] = c._id; });
 
-  const providerRole = await Role.findOne({ slug: 'provider' });
-  if (!providerRole) {
-    console.log('Provider role not found; skipping host/service seed.');
-    process.exit(0);
-    return;
-  }
-
   const providerIdsByEmail = {};
   for (const h of hosts) {
-    let user = await User.findOne({ email: h.email });
+    let user = await User.findOne({ email: h.email.toLowerCase() });
     if (!user) {
       user = await User.create({
-        email: h.email,
+        email: h.email.toLowerCase(),
         password: h.password,
         fullName: h.fullName,
-        roleId: providerRole._id,
+        is_customer: true,
+        is_provider: true,
       });
+    } else if (!user.is_provider) {
+      user.is_provider = true;
+      user.is_customer = true;
+      await user.save();
     }
     providerIdsByEmail[h.email] = user._id;
   }
@@ -211,6 +284,8 @@ async function seed() {
     };
   });
   await Service.insertMany(serviceDocs);
+  await backfillUsersSchemaFields();
+  await backfillServicesSchemaFields();
   console.log('Seeded categories and services. Bookers can see and book these host offerings.');
   process.exit(0);
 }

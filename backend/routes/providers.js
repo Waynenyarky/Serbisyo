@@ -3,12 +3,12 @@ const Service = require('../models/Service');
 const ProviderProfile = require('../models/ProviderProfile');
 const User = require('../models/User');
 const { authMiddleware } = require('./auth');
-const { requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 
 const router = express.Router();
 
 // Provider-only: activation status (has active service, verified, payout, isActive)
-router.get('/me/status', authMiddleware, requireRole('provider'), async (req, res) => {
+router.get('/me/status', authMiddleware, requirePermission('providers.manage_self'), async (req, res) => {
   try {
     const providerId = req.user.id;
     const activeCount = await Service.countDocuments({ providerId, status: 'active' });
@@ -29,7 +29,7 @@ router.get('/me/status', authMiddleware, requireRole('provider'), async (req, re
 });
 
 // Provider-only: get my profile (phone, address, bio, serviceArea, etc.)
-router.get('/me', authMiddleware, requireRole('provider'), async (req, res) => {
+router.get('/me', authMiddleware, requirePermission('providers.manage_self'), async (req, res) => {
   try {
     const profile = await ProviderProfile.findOne({ userId: req.user.id }).lean();
     if (!profile) {
@@ -62,7 +62,7 @@ router.get('/me', authMiddleware, requireRole('provider'), async (req, res) => {
 });
 
 // Provider-only: update my profile
-router.patch('/me', authMiddleware, requireRole('provider'), async (req, res) => {
+router.patch('/me', authMiddleware, requirePermission('providers.manage_self'), async (req, res) => {
   try {
     const { phone, address, bio, serviceArea, avatarUrl } = req.body;
     const profile = await ProviderProfile.findOneAndUpdate(
@@ -95,8 +95,9 @@ router.patch('/me', authMiddleware, requireRole('provider'), async (req, res) =>
 // Public: lightweight provider info for service detail (no phone or payout data)
 router.get('/:id/public', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('fullName roleId').lean();
+    const user = await User.findById(req.params.id).select('fullName is_provider').lean();
     if (!user) return res.status(404).json({ error: 'Provider not found' });
+    if (!user.is_provider) return res.status(404).json({ error: 'Provider not found' });
 
     const profile = await ProviderProfile.findOne({ userId: user._id }).lean();
     res.json({

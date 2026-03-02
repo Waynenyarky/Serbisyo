@@ -18,25 +18,7 @@ class ApiRepository {
       '/auth/login',
       data: {'email': email, 'password': password},
     );
-    final data = res.data!;
-    final userMap = data['user'] as Map<String, dynamic>;
-    final role = userMap['role'] as String?;
-    await saveAuth(
-      token: data['token'] as String,
-      userId: userMap['id'] as String,
-      email: userMap['email'] as String,
-      fullName: userMap['fullName'] as String? ?? userMap['email'] as String,
-      role: role,
-    );
-    return AuthResponse(
-      token: data['token'] as String,
-      user: AuthUser(
-        id: userMap['id'] as String,
-        email: userMap['email'] as String,
-        fullName: userMap['fullName'] as String? ?? '',
-        role: role,
-      ),
-    );
+    return _parseAuthResponse(res.data!);
   }
 
   Future<AuthResponse> register(String email, String password, String fullName, {String role = 'customer'}) async {
@@ -44,28 +26,68 @@ class ApiRepository {
       '/auth/register',
       data: {'email': email, 'password': password, 'fullName': fullName, 'role': role},
     );
-    final data = res.data!;
-    final userMap = data['user'] as Map<String, dynamic>;
-    final roleValue = userMap['role'] as String? ?? role;
+    return _parseAuthResponse(res.data!, fallbackRole: role);
+  }
+
+  Future<AuthResponse> getMe() async {
+    final res = await _dio.get<Map<String, dynamic>>('/auth/me');
+    return _parseAuthResponse(res.data!);
+  }
+
+  Future<void> logout() async => await clearAuth();
+
+  Future<AuthResponse> _parseAuthResponse(Map<String, dynamic> data, {String? fallbackRole}) async {
+    final userMap = data['user'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+    final userId = (userMap['id'] ?? userMap['_id'] ?? '').toString();
+    final email = (userMap['email'] ?? '').toString();
+    final fullName = ((userMap['fullName'] ?? userMap['name']) ?? email).toString();
+    final isCustomer = _asBool(userMap['is_customer']) ?? _asBool(userMap['isCustomer']) ?? true;
+    final isProvider = _asBool(userMap['is_provider']) ?? _asBool(userMap['isProvider']) ?? false;
+    final isAdmin = _asBool(userMap['is_admin']) ?? _asBool(userMap['isAdmin']) ?? false;
+    final adminRole = (userMap['admin_role'] ?? userMap['adminRole'])?.toString();
+
+    String? role = userMap['role']?.toString();
+    role ??= fallbackRole;
+    role ??= isAdmin ? 'admin' : (isProvider ? 'provider' : 'customer');
+
+    final token = (data['token'] ?? '').toString();
     await saveAuth(
-      token: data['token'] as String,
-      userId: userMap['id'] as String,
-      email: userMap['email'] as String,
-      fullName: userMap['fullName'] as String? ?? userMap['email'] as String,
-      role: roleValue,
+      token: token,
+      userId: userId,
+      email: email,
+      fullName: fullName,
+      role: role,
+      isCustomer: isCustomer,
+      isProvider: isProvider,
+      isAdmin: isAdmin,
+      adminRole: adminRole,
     );
+
     return AuthResponse(
-      token: data['token'] as String,
+      token: token,
       user: AuthUser(
-        id: userMap['id'] as String,
-        email: userMap['email'] as String,
-        fullName: userMap['fullName'] as String? ?? '',
-        role: roleValue,
+        id: userId,
+        email: email,
+        fullName: fullName,
+        role: role,
+        isCustomer: isCustomer,
+        isProvider: isProvider,
+        isAdmin: isAdmin,
+        adminRole: adminRole,
       ),
     );
   }
 
-  Future<void> logout() async => await clearAuth();
+  bool? _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.toLowerCase();
+      if (v == 'true' || v == '1') return true;
+      if (v == 'false' || v == '0') return false;
+    }
+    return null;
+  }
 
   // —— Categories ——
   Future<List<ServiceCategory>> getCategories() async {
@@ -350,12 +372,25 @@ class AuthResponse {
 }
 
 class AuthUser {
-  AuthUser({required this.id, required this.email, required this.fullName, this.role});
+  AuthUser({
+    required this.id,
+    required this.email,
+    required this.fullName,
+    this.role,
+    this.isCustomer = true,
+    this.isProvider = false,
+    this.isAdmin = false,
+    this.adminRole,
+  });
   final String id;
   final String email;
   final String fullName;
   /// 'customer' | 'provider' | 'admin'
   final String? role;
+  final bool isCustomer;
+  final bool isProvider;
+  final bool isAdmin;
+  final String? adminRole;
 }
 
 class ProviderStatus {

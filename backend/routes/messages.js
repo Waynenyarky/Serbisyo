@@ -3,14 +3,14 @@ const MessageThread = require('../models/MessageThread');
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const { authMiddleware } = require('./auth');
-const { requireRole, loadUserRole } = require('../middleware/rbac');
+const { requirePermission, loadUserRole } = require('../middleware/rbac');
 const mongoose = require('mongoose');
 
 const router = express.Router();
 router.use(authMiddleware);
 
 // List threads: customer = where userId=me, provider = where providerId=me
-router.get('/threads', loadUserRole, async (req, res) => {
+router.get('/threads', requirePermission('messages.read'), async (req, res) => {
   try {
     const filter = req.user.roleSlug === 'provider'
       ? { providerId: req.user.id }
@@ -35,7 +35,7 @@ router.get('/threads', loadUserRole, async (req, res) => {
 });
 
 // Get one thread: allow if user is customer (userId) or provider (providerId)
-router.get('/threads/:id', async (req, res) => {
+router.get('/threads/:id', requirePermission('messages.read'), async (req, res) => {
   try {
     const thread = await MessageThread.findOne({
       _id: req.params.id,
@@ -60,7 +60,7 @@ router.get('/threads/:id', async (req, res) => {
 });
 
 // Create thread: customer only; body bookingId (providerId/providerName/serviceTitle from booking)
-router.post('/threads', requireRole('customer'), async (req, res) => {
+router.post('/threads', requirePermission('messages.create_thread'), async (req, res) => {
   try {
     const { bookingId } = req.body;
     if (!bookingId) return res.status(400).json({ error: 'bookingId required' });
@@ -104,7 +104,7 @@ router.post('/threads', requireRole('customer'), async (req, res) => {
 });
 
 // Create direct thread from a service (no booking required): customer only
-router.post('/threads/direct', requireRole('customer'), async (req, res) => {
+router.post('/threads/direct', requirePermission('messages.create_thread'), async (req, res) => {
   try {
     const { serviceId } = req.body;
     if (!serviceId) return res.status(400).json({ error: 'serviceId required' });
@@ -153,7 +153,7 @@ router.post('/threads/direct', requireRole('customer'), async (req, res) => {
 });
 
 // Send message: allow if user is participant (userId or providerId)
-router.post('/threads/:id/messages', async (req, res) => {
+router.post('/threads/:id/messages', requirePermission('messages.send'), async (req, res) => {
   try {
     const { text } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: 'Message text required' });

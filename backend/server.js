@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const passport = require('passport');
 const { connectDB } = require('./config/db');
+const { configurePassport } = require('./config/passport');
 
 const authRoutes = require('./routes/auth');
 const categoriesRoutes = require('./routes/categories');
@@ -13,8 +15,11 @@ const app = express();
 const BASE_PORT = parseInt(process.env.PORT, 10) || 3000;
 const MAX_PORT_ATTEMPTS = 20; // try 3000–3019 (or PORT to PORT+19)
 
+configurePassport(passport);
+
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 const routes = [
   { path: '/api/auth', name: 'Auth (login, register, me)' },

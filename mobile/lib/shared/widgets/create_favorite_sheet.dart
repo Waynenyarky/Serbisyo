@@ -15,6 +15,7 @@ Future<void> addServiceToFavorites(
   String serviceId,
 ) async {
   final noListYet = await hasNoFavoriteListYet();
+  if (!context.mounted) return;
   if (noListYet) {
     await showCreateFavoriteSheet(
       context,
@@ -27,15 +28,14 @@ Future<void> addServiceToFavorites(
   } else {
     await addFavorite(serviceId);
     ref.invalidate(favoritesIdsProvider);
-    if (context.mounted) {
-      final name = await getFavoriteListName();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added to ${name ?? 'Favorites'}'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    final name = await getFavoriteListName();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added to ${name ?? 'Favorites'}'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }
 

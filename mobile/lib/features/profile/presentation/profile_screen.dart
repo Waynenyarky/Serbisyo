@@ -417,8 +417,7 @@ class _ProviderExploreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final role = userAsync.valueOrNull?.role;
-    final isProvider = role == 'provider';
+    final isProvider = userAsync.valueOrNull?.isProviderRole ?? false;
     if (!isProvider) return _BecomeHostCard(onTap: onBecomeHost);
 
     final status = providerStatusAsync.valueOrNull;

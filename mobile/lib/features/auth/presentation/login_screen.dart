@@ -127,7 +127,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Google sign-in is available on backend, but mobile callback wiring is not enabled yet.'),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
                 label: const Text('Continue with Google'),
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: AppSpacing.md)),

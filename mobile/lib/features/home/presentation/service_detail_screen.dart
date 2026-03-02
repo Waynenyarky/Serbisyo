@@ -221,7 +221,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                             service: service,
                           ),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
                   if ((service.availability)?.isNotEmpty == true) ...[
                     const SizedBox(height: AppSpacing.md),

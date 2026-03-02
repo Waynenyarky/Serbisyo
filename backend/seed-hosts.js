@@ -1,5 +1,4 @@
 require('dotenv').config();
-const Role = require('./models/Role');
 const User = require('./models/User');
 const { connectDB } = require('./config/db');
 
@@ -22,25 +21,25 @@ const hosts = [
 async function seedHosts() {
   await connectDB();
 
-  let providerRole = await Role.findOne({ slug: 'provider' });
-  if (!providerRole) {
-    providerRole = await Role.create({ name: 'Provider', slug: 'provider' });
-    console.log('Created provider role.');
-  }
-
   const created = [];
   const existing = [];
   for (const h of hosts) {
-    const user = await User.findOne({ email: h.email });
+    const user = await User.findOne({ email: h.email.toLowerCase() });
     if (user) {
+      if (!user.is_provider) {
+        user.is_provider = true;
+        user.is_customer = true;
+        await user.save();
+      }
       existing.push(h.email);
       continue;
     }
     await User.create({
-      email: h.email,
+      email: h.email.toLowerCase(),
       password: h.password,
       fullName: h.fullName,
-      roleId: providerRole._id,
+      is_customer: true,
+      is_provider: true,
     });
     created.push(h.email);
   }

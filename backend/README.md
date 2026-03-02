@@ -1,56 +1,84 @@
 # Serbisyo Backend
 
-Node.js + Express API with MongoDB for the Serbisyo mobile app.
+Node.js + Express + MongoDB backend for the Serbisyo mobile app.
+
+## Implemented updates (BE-E01 + seed/schema work)
+
+- JWT auth contract normalized to `{ user, token }` for `register`, `login`, and `me`.
+- Google OAuth (Google-only) wired with:
+   - `GET /api/auth/oauth/google`
+   - `GET /api/auth/oauth/google/callback`
+- User role model aligned to booleans:
+   - `is_customer`, `is_provider`, `is_admin`
+   - optional `admin_role`
+   - legacy role reference flow replaced by boolean role derivation.
+- RBAC middleware upgraded to permission-based checks (`requirePermission`) with role derivation and fallback role gates (`requireRole`).
+- Forbidden access is persisted to `AdminLog` (`action: forbidden_access`) with method/path/user-agent/context.
+- Seed process aligned to `DB_SCHEMA.md` through seed-time backfills and collection checks:
+   - ensures required collections exist before reseed (including `payments`, `reviews`, `messages`, `adminlogs`)
+   - backfills user mirror fields (e.g., `password_hash`, compatibility name/address/rating fields)
+   - backfills service mirror fields (e.g., `name`, `category`, `base_price`)
+   - host seed emails are normalized to lowercase.
 
 ## Setup
 
-1. **MongoDB**: Install [MongoDB](https://www.mongodb.com/try/download/community) or use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and set the connection string in `.env`.
+1. Install MongoDB locally or use MongoDB Atlas.
+2. Install dependencies:
+    ```bash
+    npm install
+    ```
+3. Create/update `.env` and set:
+    - `MONGODB_URI` (default local: `mongodb://localhost:27017/serbisyo`)
+    - `PORT` (default: `3000`)
+    - `JWT_SECRET`
+    - `GOOGLE_CLIENT_ID` (required for Google OAuth)
+    - `GOOGLE_CLIENT_SECRET` (required for Google OAuth)
+    - `GOOGLE_CALLBACK_URL` (default behavior expects `/api/auth/oauth/google/callback`)
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+## Run
 
-3. **Environment**: Copy `.env.example` to `.env` and set:
-   - `MONGODB_URI` – MongoDB connection string (default: `mongodb://localhost:27017/serbisyo`)
-   - `PORT` – API port (default: `3000`)
-   - `JWT_SECRET` – Secret for JWT signing
-
-4. **Seed categories and services**
-   ```bash
-   npm run seed
-   ```
-
-5. **Run the server**
+- Start API:
    ```bash
    npm run dev
    ```
-   API base URL: `http://localhost:3000` (routes under `/api`).
+- Seed categories/services/hosts + schema-alignment backfills:
+   ```bash
+   npm run seed
+   ```
+- Seed hosts only:
+   ```bash
+   npm run seed:hosts
+   ```
 
-## API Endpoints
+Base URL: `http://localhost:3000` (all routes under `/api`).
 
-- `POST /api/auth/register` – Register (body: email, password, fullName)
-- `POST /api/auth/login` – Login (body: email, password)
-- `GET /api/auth/me` – Current user (header: `Authorization: Bearer <token>`)
-- `GET /api/categories` – List service categories
-- `GET /api/services` – List services (query: categoryId, q)
-- `GET /api/services/:id` – Service by id
-- `GET /api/bookings` – My bookings (auth required)
-- `GET /api/bookings/:id` – Booking by id (auth required)
-- `POST /api/bookings` – Create booking (auth required)
-- `GET /api/messages/threads` – My message threads (auth required)
-- `GET /api/messages/threads/:id` – Thread with messages (auth required)
-- `POST /api/messages/threads/:id/messages` – Send message (auth required)
+## Auth response contract
 
-## Mobile connection
-
-In the Flutter app, set the API base URL:
-
-- **Windows / same machine**: `http://localhost:3000`
-- **Android emulator**: `http://10.0.2.2:3000`
-- **Device on same network**: `http://YOUR_PC_IP:3000`
-
-Run the app with:
-```bash
-flutter run --dart-define=API_BASE_URL=http://localhost:3000
+```json
+{
+   "user": {
+      "id": "...",
+      "email": "...",
+      "fullName": "...",
+      "role": "customer|provider|admin",
+      "is_customer": true,
+      "is_provider": false,
+      "is_admin": false,
+      "admin_role": null
+   },
+   "token": "..."
+}
 ```
+
+## Key endpoints
+
+- `POST /api/auth/register` (email, password, fullName, role=`customer|provider`)
+- `POST /api/auth/login`
+- `GET /api/auth/me` (Bearer token)
+- `GET /api/auth/oauth/google?role=customer|provider`
+- `GET /api/auth/oauth/google/callback`
+- `GET /api/categories`
+- `GET /api/services` (`categoryId`, `q` supported)
+- `GET /api/services/:id`
+- `GET /api/bookings`, `GET /api/bookings/:id`, `POST /api/bookings`
+- `GET /api/messages/threads`, `GET /api/messages/threads/:id`, `POST /api/messages/threads/:id/messages`

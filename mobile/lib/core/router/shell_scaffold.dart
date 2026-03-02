@@ -18,8 +18,7 @@ class ShellScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
-    final role = userAsync.valueOrNull?.role;
-    final isProvider = role == 'provider';
+    final isProvider = userAsync.valueOrNull?.isProviderRole ?? false;
     final favoritesAsync = ref.watch(favoritesIdsProvider);
     final favoriteCount = favoritesAsync.valueOrNull?.length ?? 0;
 
@@ -105,8 +104,8 @@ class ShellFavoritesOrMyServices extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(currentUserProvider).valueOrNull?.role;
-    if (role == 'provider') {
+    final isProvider = ref.watch(currentUserProvider).valueOrNull?.isProviderRole ?? false;
+    if (isProvider) {
       return const MyServicesScreen(showBackButton: false);
     }
     return const FavoritesScreen();

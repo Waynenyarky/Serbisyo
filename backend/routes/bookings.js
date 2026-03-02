@@ -1,13 +1,13 @@
 const express = require('express');
 const Booking = require('../models/Booking');
 const { authMiddleware } = require('./auth');
-const { requireRole, loadUserRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 
 const router = express.Router();
 router.use(authMiddleware);
 
 // List bookings: customer = my bookings (userId=me), provider = bookings for me (providerId=me)
-router.get('/', loadUserRole, async (req, res) => {
+router.get('/', requirePermission('bookings.read'), async (req, res) => {
   try {
     const filter = req.user.roleSlug === 'provider'
       ? { providerId: req.user.id }
@@ -34,7 +34,7 @@ router.get('/', loadUserRole, async (req, res) => {
 });
 
 // Get one booking: customer can get own, provider can get where they are provider
-router.get('/:id', loadUserRole, async (req, res) => {
+router.get('/:id', requirePermission('bookings.read'), async (req, res) => {
   try {
     const filter = req.user.roleSlug === 'provider'
       ? { _id: req.params.id, providerId: req.user.id }
@@ -61,7 +61,7 @@ router.get('/:id', loadUserRole, async (req, res) => {
 });
 
 // Create booking: customer only; body must include providerId (from service, or backend will try to get from service)
-router.post('/', requireRole('customer'), async (req, res) => {
+router.post('/', requirePermission('bookings.create'), async (req, res) => {
   try {
     const { serviceId, providerId: bodyProviderId, serviceTitle, providerName, scheduledDate, scheduledTime, address, totalAmount, imageUrl } = req.body;
     if (!serviceId || !serviceTitle || !providerName || !scheduledDate || !scheduledTime || !address || totalAmount == null) {
