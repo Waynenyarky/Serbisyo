@@ -22,18 +22,20 @@ Tracking scale:
 - **Feature MB-F01: Email/password and OAuth entry points**
   - **Story MB-S01** `[-] PARTIAL`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S01
+  - Update: Session integration completed auth contract parsing/storage refresh (`{ user, token }`, role booleans, `/auth/me` sync), but mobile OAuth callback flow is still not wired.
   - Tasks:
-    - Add OAuth button + loading/error states in auth screens.
-    - Extend auth provider/repository for OAuth endpoint.
-    - Persist token and role in secure storage.
+    - Add OAuth button + loading/error states in auth screens. ⏳ (button present; full OAuth loading/error/callback flow pending)
+    - Extend auth provider/repository for OAuth endpoint. ⏳ (auth repository extended for `/auth/me`; OAuth mobile endpoint/callback integration pending)
+    - Persist token and role in secure storage. ✅ (token, role, role booleans, and `admin_role` persisted)
 
 - **Feature MB-F02: Role-aware routing and guarded screens**
   - **Story MB-S02** `[-] PARTIAL`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S02
+  - Update: Role-aware UI behavior now uses boolean-safe checks (`is_provider` etc.) in providers/shell/profile. Guard/forbidden-state completion remains.
   - Tasks:
-    - Add route guards in app router.
-    - Update bottom navigation based on `is_customer` / `is_provider` / `is_admin`.
-    - Add forbidden-state component.
+    - Add route guards in app router. ⏳
+    - Update bottom navigation based on `is_customer` / `is_provider` / `is_admin`. ✅
+    - Add forbidden-state component. ⏳
 
 ### Epic MB-E02: Search and Discovery UX
 **Progress:** 0 Done / 2 Partial / 0 Not Started (2 stories) → **50.0%**

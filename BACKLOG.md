@@ -41,7 +41,7 @@ Source of truth: `PRD.md`, `DB_SCHEMA.md`
 |---|---|---|---|---|
 | [MASTER_BACKLOG.md](MASTER_BACKLOG.md) | 2026-03-02 | _TBD_ | Yes | Initial split created |
 | [BACKEND_BACKLOG.md](BACKEND_BACKLOG.md) | 2026-03-02 | GitHub Copilot | Yes | Updated BE-E01 to done, refreshed BE-E08 partial notes |
-| [MOBILE_BACKLOG.md](MOBILE_BACKLOG.md) | 2026-03-02 | _TBD_ | Yes | Initial split created |
+| [MOBILE_BACKLOG.md](MOBILE_BACKLOG.md) | 2026-03-02 | GitHub Copilot | Yes | Updated MB-S01/MB-S02 task-level progress notes after mobile auth/role integration |
 | [BACKLOG.md](BACKLOG.md) (rollup/index) | 2026-03-02 | GitHub Copilot | Yes | Recomputed backend and overall progress |
 
 ### Update Workflow (Quick)
