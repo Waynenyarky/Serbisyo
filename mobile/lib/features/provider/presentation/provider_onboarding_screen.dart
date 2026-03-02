@@ -230,7 +230,7 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
             const Text('Category', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _categoryId,
+              initialValue: _categoryId,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -268,7 +268,7 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<String>(
-            value: _categoryId,
+            initialValue: _categoryId,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             hint: const Text('Select category'),
             items: (ref.watch(categoriesProvider).value ?? []).map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),

@@ -12,7 +12,6 @@ class _NotificationItem {
     required this.body,
     required this.timeAgo,
     required this.isUnread,
-    this.icon,
   });
 
   final String id;
