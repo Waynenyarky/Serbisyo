@@ -1,13 +1,13 @@
 # Serbisyo Backend Backlog
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 ## Progress Snapshot
 - Stories: 15
-- Done: 2
-- Partial: 4
-- Not Started: 9
-- Progress: 26.7%
+- Done: 4
+- Partial: 3
+- Not Started: 8
+- Progress: 36.7%
 
 Tracking scale:
 - DONE = 1
@@ -38,23 +38,25 @@ Tracking scale:
     - Add forbidden access audit event. ✅
 
 ### Epic BE-E02: Search and Matching Engine
-**Progress:** 0 Done / 1 Partial / 1 Not Started (2 stories) → **25.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature BE-F03: Search query relevance**
-  - **Story BE-S03** `[-] PARTIAL`
+  - **Story BE-S03** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S03
+  - Update: `/services` now supports validated query defaults + pagination (`page`, `limit`), provider/category filters, and relevance-aware sorting for search terms.
   - Tasks:
-    - Extend `/services` and provider lookup query params.
-    - Add query validation and defaults.
-    - Add indexes for service/category search fields.
+    - Extend `/services` and provider lookup query params. ✅
+    - Add query validation and defaults. ✅
+    - Add indexes for service/category search fields. ✅
 
 - **Feature BE-F04: Nearest provider selection service**
-  - **Story BE-S04** `[ ] NOT_STARTED`
+  - **Story BE-S04** `[x] DONE`
   - Priority: P0 | SP: 13 | Effort: L | Depends on: M-S04
+  - Update: Added nearest-provider geo query endpoint with distance-first ranking and rating tie-break plus explicit fallback contract.
   - Tasks:
-    - Use `Users.address.coordinates` for provider/customer geolocation queries.
-    - Implement geo query + ranking function.
-    - Add no-candidate fallback response contract.
+    - Use `Users.address.coordinates` for provider/customer geolocation queries. ✅
+    - Implement geo query + ranking function. ✅
+    - Add no-candidate fallback response contract. ✅
 
 ### Epic BE-E03: Booking Domain and Orchestration
 **Progress:** 0 Done / 0 Partial / 2 Not Started (2 stories) → **0.0%**
@@ -166,8 +168,8 @@ Tracking scale:
 ## Backend P0 Queue
 - `BE-S01` `[x] DONE`
 - `BE-S02` `[x] DONE`
-- `BE-S03` `[-] PARTIAL`
-- `BE-S04` `[ ] NOT_STARTED`
+- `BE-S03` `[x] DONE`
+- `BE-S04` `[x] DONE`
 - `BE-S05` `[ ] NOT_STARTED`
 - `BE-S06` `[ ] NOT_STARTED`
 - `BE-S07` `[ ] NOT_STARTED`

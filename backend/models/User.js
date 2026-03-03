@@ -7,6 +7,25 @@ const oauthProviderSchema = new mongoose.Schema({
   linkedAt: { type: Date },
 }, { _id: false });
 
+const geoPointSchema = new mongoose.Schema({
+  type: { type: String, enum: ['Point'], default: 'Point' },
+  coordinates: {
+    type: [Number],
+    default: [0, 0],
+    validate: {
+      validator: (value) => Array.isArray(value) && value.length === 2,
+      message: 'Coordinates must be [lng, lat]',
+    },
+  },
+}, { _id: false });
+
+const addressSchema = new mongoose.Schema({
+  street: { type: String, default: '' },
+  city: { type: String, default: '' },
+  province: { type: String, default: '' },
+  coordinates: { type: geoPointSchema, default: () => ({ type: 'Point', coordinates: [0, 0] }) },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String },
@@ -15,10 +34,15 @@ const userSchema = new mongoose.Schema({
   is_provider: { type: Boolean, default: false },
   is_admin: { type: Boolean, default: false },
   admin_role: { type: String, default: null },
+  address: { type: addressSchema, default: () => ({}) },
+  ratings: { type: Number, default: 0 },
   oauthProviders: {
     google: { type: oauthProviderSchema, default: null },
   },
 }, { timestamps: true });
+
+userSchema.index({ is_provider: 1 });
+userSchema.index({ 'address.coordinates': '2dsphere' });
 
 userSchema.pre('save', async function (next) {
   if (!this.password && !this.oauthProviders?.google?.id) {

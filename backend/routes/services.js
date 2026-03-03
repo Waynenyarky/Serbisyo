@@ -1,24 +1,100 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Service = require('../models/Service');
+const ServiceCategory = require('../models/ServiceCategory');
 const { authMiddleware } = require('./auth');
 const { requireRole } = require('../middleware/rbac');
 
 const router = express.Router();
 
-// Public list: only active services (optional filter by categoryId, q, providerId)
+function isValidObjectId(value) {
+  return mongoose.Types.ObjectId.isValid(value);
+}
+
+function parsePositiveInt(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function escapeRegex(input) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Public list: only active services (supports categoryId, providerId, q, pagination, sort)
 router.get('/', async (req, res) => {
   try {
-    const { categoryId, q, providerId } = req.query;
+    const {
+      categoryId,
+      providerId,
+      q,
+      page: pageQuery,
+      limit: limitQuery,
+      sortBy,
+      sortOrder,
+    } = req.query;
+
+    if (categoryId && !isValidObjectId(categoryId)) {
+      return res.status(400).json({ error: 'Invalid categoryId' });
+    }
+    if (providerId && !isValidObjectId(providerId)) {
+      return res.status(400).json({ error: 'Invalid providerId' });
+    }
+
+    const page = parsePositiveInt(pageQuery, 1);
+    if (page === null) return res.status(400).json({ error: 'Invalid page. Must be a positive integer.' });
+    const limit = parsePositiveInt(limitQuery, 20);
+    if (limit === null) return res.status(400).json({ error: 'Invalid limit. Must be a positive integer.' });
+    const cappedLimit = Math.min(limit, 50);
+    const skip = (page - 1) * cappedLimit;
+
+    const normalizedQ = typeof q === 'string' ? q.trim() : '';
+    if (normalizedQ.length > 100) {
+      return res.status(400).json({ error: 'Invalid q. Max length is 100 characters.' });
+    }
+
+    const allowedSortBy = new Set(['relevance', 'rating', 'newest', 'price']);
+    const normalizedSortBy = allowedSortBy.has(sortBy) ? sortBy : (normalizedQ ? 'relevance' : 'rating');
+    const normalizedSortOrder = sortOrder === 'asc' ? 1 : -1;
+
     const filter = { status: 'active' };
     if (categoryId) filter.categoryId = categoryId;
     if (providerId) filter.providerId = providerId;
-    if (q) {
+
+    let sort = { rating: -1, reviewCount: -1, createdAt: -1 };
+
+    if (normalizedQ) {
+      const safeRegex = new RegExp(escapeRegex(normalizedQ), 'i');
+      const matchingCategories = await ServiceCategory.find({ name: safeRegex }).select('_id').lean();
+      const matchingCategoryIds = matchingCategories.map((item) => item._id);
       filter.$or = [
-        { title: new RegExp(q, 'i') },
-        { providerName: new RegExp(q, 'i') },
+        { title: safeRegex },
+        { providerName: safeRegex },
+        { description: safeRegex },
       ];
+      if (matchingCategoryIds.length) {
+        filter.$or.push({ categoryId: { $in: matchingCategoryIds } });
+      }
+      sort = normalizedSortBy === 'newest'
+        ? { createdAt: -1 }
+        : normalizedSortBy === 'price'
+          ? { pricePerHour: normalizedSortOrder, rating: -1 }
+          : { rating: -1, reviewCount: -1, createdAt: -1 };
+    } else if (normalizedSortBy === 'newest') {
+      sort = { createdAt: -1 };
+    } else if (normalizedSortBy === 'price') {
+      sort = { pricePerHour: normalizedSortOrder, rating: -1 };
+    } else if (normalizedSortBy === 'rating' || normalizedSortBy === 'relevance') {
+      sort = { rating: -1, reviewCount: -1, createdAt: -1 };
     }
-    const services = await Service.find(filter).populate('categoryId', 'name').lean();
+
+    const services = await Service.find(filter)
+      .populate('categoryId', 'name')
+      .sort(sort)
+      .skip(skip)
+      .limit(cappedLimit)
+      .lean();
+
     const list = services.map(s => ({
       id: s._id.toString(),
       title: s.title,
@@ -35,6 +111,7 @@ router.get('/', async (req, res) => {
       availability: s.availability || null,
       thingsToKnow: s.thingsToKnow || null,
     }));
+
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });

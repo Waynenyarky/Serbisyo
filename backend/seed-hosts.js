@@ -16,6 +16,18 @@ const hosts = [
   { email: 'host.move@serbisyo.demo', password: 'demo1234', fullName: 'Move It Co', providerName: 'Move It Co' },
   { email: 'host.paw@serbisyo.demo', password: 'demo1234', fullName: 'Paw Friends', providerName: 'Paw Friends' },
   { email: 'host.serenity@serbisyo.demo', password: 'demo1234', fullName: 'Serenity Spa', providerName: 'Serenity Spa' },
+  { email: 'host.miguel.reyes@serbisyo.demo', password: 'demo1234', fullName: 'Miguel Reyes', providerName: 'PrimeFlow Plumbing' },
+  { email: 'host.lianne.cruz@serbisyo.demo', password: 'demo1234', fullName: 'Lianne Cruz', providerName: 'UrbanSprout Gardens' },
+  { email: 'host.paolo.garcia@serbisyo.demo', password: 'demo1234', fullName: 'Paolo Garcia', providerName: 'BrightNest Cleaning' },
+  { email: 'host.jerome.tan@serbisyo.demo', password: 'demo1234', fullName: 'Jerome Tan', providerName: 'QuickMend Home Repair' },
+  { email: 'host.rafael.mendoza@serbisyo.demo', password: 'demo1234', fullName: 'Rafael Mendoza', providerName: 'VoltGuard Electrical' },
+  { email: 'host.kevin.delacruz@serbisyo.demo', password: 'demo1234', fullName: 'Kevin Dela Cruz', providerName: 'LiftLine Movers' },
+  { email: 'host.sofia.bautista@serbisyo.demo', password: 'demo1234', fullName: 'Sofia Bautista', providerName: 'PetCare Buddy PH' },
+  { email: 'host.camille.navarro@serbisyo.demo', password: 'demo1234', fullName: 'Camille Navarro', providerName: 'Tranquil Touch Wellness' },
+  { email: 'host.noel.flores@serbisyo.demo', password: 'demo1234', fullName: 'Noel Flores', providerName: 'AquaShield Plumbing' },
+  { email: 'host.angela.perez@serbisyo.demo', password: 'demo1234', fullName: 'Angela Perez', providerName: 'LeafLine Garden Services' },
+  { email: 'host.vincent.ramos@serbisyo.demo', password: 'demo1234', fullName: 'Vincent Ramos', providerName: 'MetroFix Appliance Care' },
+  { email: 'host.bianca.lopez@serbisyo.demo', password: 'demo1234', fullName: 'Bianca Lopez', providerName: 'GlowHome Wellness' },
 ];
 
 async function seedHosts() {

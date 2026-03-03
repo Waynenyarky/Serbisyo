@@ -5,6 +5,8 @@ const categorySchema = new mongoose.Schema({
   assetImagePath: { type: String, default: 'assets/images/placeholders/placeholder.png' },
 }, { timestamps: true });
 
+categorySchema.index({ name: 1 }, { unique: true });
+
 categorySchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {

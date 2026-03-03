@@ -18,6 +18,13 @@ const serviceSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft', 'active'], default: 'draft' },
 }, { timestamps: true });
 
+serviceSchema.index({ status: 1, categoryId: 1, providerId: 1 });
+serviceSchema.index({ title: 'text', providerName: 'text', description: 'text' }, {
+  weights: { title: 8, providerName: 5, description: 2 },
+  name: 'service_text_search',
+});
+serviceSchema.index({ rating: -1, reviewCount: -1, createdAt: -1 });
+
 serviceSchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {

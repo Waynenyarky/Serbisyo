@@ -1,6 +1,6 @@
 # Serbisyo Master Backlog
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 ## Progress Snapshot
 - Stories: 13
@@ -32,9 +32,9 @@ Tracking scale:
 
 - **Epic M-E02: Provider Search & Nearest Matching**
   - **Feature M-F03**
-    - `M-S03` `[-] PARTIAL` (depends on `BE-S03`, `MB-S03`) — search/filter works, advanced behaviors pending.
+    - `M-S03` `[-] PARTIAL` (depends on `BE-S03`, `MB-S03`) — backend search contract/pagination completed; mobile filter and UX closure still pending.
   - **Feature M-F04**
-    - `M-S04` `[-] PARTIAL` (depends on `BE-S04`, `MB-S04`) — nearest entry exists in UI but full matching pipeline is missing.
+    - `M-S04` `[-] PARTIAL` (depends on `BE-S04`, `MB-S04`) — backend nearest matching + fallback contract completed; mobile nearest booking UX remains partial.
 
 ### Initiative M-I03: Booking and Fulfillment
 **Progress:** 0 Done / 1 Partial / 1 Not Started (2 stories) → **25.0%**

@@ -2,7 +2,7 @@
 
 Node.js + Express + MongoDB backend for the Serbisyo mobile app.
 
-## Implemented updates (BE-E01 + seed/schema work)
+## Implemented updates (BE-E01 + BE-E02 + seed/schema work)
 
 - JWT auth contract normalized to `{ user, token }` for `register`, `login`, and `me`.
 - Google OAuth (Google-only) wired with:
@@ -19,6 +19,11 @@ Node.js + Express + MongoDB backend for the Serbisyo mobile app.
    - backfills user mirror fields (e.g., `password_hash`, compatibility name/address/rating fields)
    - backfills service mirror fields (e.g., `name`, `category`, `base_price`)
    - host seed emails are normalized to lowercase.
+- Search and matching engine updates (BE-E02):
+   - `/services` supports validated filters and defaults (`q`, `categoryId`, `providerId`, `page`, `limit`, sort options)
+   - added provider lookup endpoint: `GET /api/providers/search`
+   - added nearest provider endpoint: `GET /api/providers/nearest`
+   - added service/category/user indexes for query relevance and geo matching (`2dsphere` on `Users.address.coordinates`).
 
 ## Setup
 
@@ -78,7 +83,27 @@ Base URL: `http://localhost:3000` (all routes under `/api`).
 - `GET /api/auth/oauth/google?role=customer|provider`
 - `GET /api/auth/oauth/google/callback`
 - `GET /api/categories`
-- `GET /api/services` (`categoryId`, `q` supported)
+- `GET /api/services` (`categoryId`, `providerId`, `q`, `page`, `limit`, `sortBy`, `sortOrder`)
 - `GET /api/services/:id`
+- `GET /api/providers/search` (`q`, `categoryId`, `page`, `limit`)
+- `GET /api/providers/nearest` (`lng`, `lat`, `radiusMeters`, `limit`, optional `categoryId`)
 - `GET /api/bookings`, `GET /api/bookings/:id`, `POST /api/bookings`
 - `GET /api/messages/threads`, `GET /api/messages/threads/:id`, `POST /api/messages/threads/:id/messages`
+
+## Nearest provider fallback contract
+
+When no provider candidates are found in the requested radius, nearest lookup returns HTTP `200` with:
+
+```json
+{
+   "matched": false,
+   "fallbackReason": "no_candidates_in_radius",
+   "search": {
+      "lng": 0,
+      "lat": 0,
+      "radiusMeters": 500,
+      "categoryId": null
+   },
+   "candidates": []
+}
+```
