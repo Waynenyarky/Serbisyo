@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/api/auth_guard.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -18,8 +21,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _oauthLoading = false;
   bool _obscurePassword = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final msg = AuthGuard.consumePendingLoginMessage();
+      if (!mounted || msg == null || msg.isEmpty) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    });
+  }
 
   @override
   void dispose() {
@@ -54,6 +68,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       });
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _oauthLoading = true;
+      _error = null;
+    });
+    try {
+      final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID']?.trim();
+      final googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+        serverClientId: (webClientId == null || webClientId.isEmpty) ? null : webClientId,
+      );
+
+      await googleSignIn.signOut();
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        setState(() => _oauthLoading = false);
+        return;
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Google sign-in did not return an ID token. Check GOOGLE_WEB_CLIENT_ID.');
+      }
+
+      await ref.read(apiRepositoryProvider).loginWithGoogleIdToken(idToken);
+      if (!mounted) return;
+      ref.invalidate(currentUserProvider);
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString();
+      final lowerMsg = msg.toLowerCase();
+      final isApi10 = lowerMsg.contains('api 10') || lowerMsg.contains('apiexception: 10');
+      setState(() {
+        _error = isApi10
+            ? 'Google Sign-In is not configured for this Android app fingerprint yet. '
+                'Add package com.serbisyo.serbisyo with the current debug SHA1 to your Google OAuth Android client, then retry.'
+            : msg
+                .replaceFirst('DioException [bad response]:', '')
+                .replaceFirst('DioException [connection error]:', '')
+                .replaceFirst('Exception:', '')
+                .trim();
+        if (_error != null && _error!.length > 160) {
+          _error = '${_error!.substring(0, 160)}...';
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _oauthLoading = false);
+      }
     }
   }
 
@@ -127,15 +195,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Google sign-in is available on backend, but mobile callback wiring is not enabled yet.'),
-                    ),
-                  );
-                },
+                onPressed: (_loading || _oauthLoading) ? null : _loginWithGoogle,
                 icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
-                label: const Text('Continue with Google'),
+                label: _oauthLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue with Google'),
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: AppSpacing.md)),
               ),
             ],

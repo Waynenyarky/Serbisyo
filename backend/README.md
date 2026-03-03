@@ -8,6 +8,7 @@ Node.js + Express + MongoDB backend for the Serbisyo mobile app.
 - Google OAuth (Google-only) wired with:
    - `GET /api/auth/oauth/google`
    - `GET /api/auth/oauth/google/callback`
+   - `POST /api/auth/oauth/google/mobile` (ID token exchange from mobile)
 - User role model aligned to booleans:
    - `is_customer`, `is_provider`, `is_admin`
    - optional `admin_role`
@@ -39,6 +40,21 @@ Node.js + Express + MongoDB backend for the Serbisyo mobile app.
     - `GOOGLE_CLIENT_ID` (required for Google OAuth)
     - `GOOGLE_CLIENT_SECRET` (required for Google OAuth)
     - `GOOGLE_CALLBACK_URL` (default behavior expects `/api/auth/oauth/google/callback`)
+
+## OAuth setup (Google Cloud)
+
+1. In Google Cloud Console, configure the OAuth consent screen.
+2. Create OAuth Client ID type **Web application**.
+3. Add the backend callback URL in Authorized redirect URIs:
+   - `http://localhost:3000/api/auth/oauth/google/callback`
+   - If backend runs on fallback port, also add `http://localhost:3001/api/auth/oauth/google/callback`
+4. Copy Web client credentials into `backend/.env`:
+   - `GOOGLE_CLIENT_ID=<web-client-id>.apps.googleusercontent.com`
+   - `GOOGLE_CLIENT_SECRET=<web-client-secret>`
+5. (Required for Android app sign-in) Create OAuth Client ID type **Android** with:
+   - package name: `com.serbisyo.serbisyo`
+   - SHA1: `4D:F7:B2:17:48:1F:B7:91:6F:49:78:AC:B2:EE:DD:90:9B:C9:55:F3`
+6. Restart backend after env changes.
 
 ## Run
 
@@ -82,6 +98,7 @@ Base URL: `http://localhost:3000` (all routes under `/api`).
 - `GET /api/auth/me` (Bearer token)
 - `GET /api/auth/oauth/google?role=customer|provider`
 - `GET /api/auth/oauth/google/callback`
+- `POST /api/auth/oauth/google/mobile` (`idToken`, optional `role=customer|provider`)
 - `GET /api/categories`
 - `GET /api/services` (`categoryId`, `providerId`, `q`, `page`, `limit`, `sortBy`, `sortOrder`)
 - `GET /api/services/:id`
@@ -107,3 +124,24 @@ When no provider candidates are found in the requested radius, nearest lookup re
    "candidates": []
 }
 ```
+
+## OAuth integration verification notes
+
+- Browser OAuth start route should return HTTP `302` redirect to Google when `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` are configured.
+- Mobile token-exchange route behavior:
+   - empty payload returns `400` (`idToken is required` path)
+   - invalid token returns `401`.
+- If `/api/auth/oauth/google` throws `Unknown authentication strategy "google"`, backend env is missing `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` at runtime.
+
+## Android Google Sign-In troubleshooting (`ApiException: 10`)
+
+If mobile login fails with `PlatformException(sign_in_failed, ... ApiException: 10 ...)`, the Android OAuth client is mismatched.
+
+- Expected Android package: `com.serbisyo.serbisyo`
+- Current debug SHA1: `4D:F7:B2:17:48:1F:B7:91:6F:49:78:AC:B2:EE:DD:90:9B:C9:55:F3`
+
+Checklist:
+- In Google Cloud Console, create/update OAuth Client ID type **Android** with that package + SHA1.
+- Keep OAuth Client ID type **Web** configured for backend token audience validation (`GOOGLE_CLIENT_ID`).
+- Ensure the mobile app uses the same web client in `GOOGLE_WEB_CLIENT_ID`.
+- After changes, reinstall the app or run a clean rebuild.

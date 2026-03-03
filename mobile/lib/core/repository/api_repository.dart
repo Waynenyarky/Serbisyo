@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../api/auth_guard.dart';
 import '../api/auth_storage.dart';
 import '../models/booking_model.dart';
 import '../models/message_thread_model.dart';
@@ -29,12 +30,26 @@ class ApiRepository {
     return _parseAuthResponse(res.data!, fallbackRole: role);
   }
 
+  Future<AuthResponse> loginWithGoogleIdToken(
+    String idToken, {
+    String role = 'customer',
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/auth/oauth/google/mobile',
+      data: {'idToken': idToken, 'role': role},
+    );
+    return _parseAuthResponse(res.data!, fallbackRole: role);
+  }
+
   Future<AuthResponse> getMe() async {
     final res = await _dio.get<Map<String, dynamic>>('/auth/me');
     return _parseAuthResponse(res.data!);
   }
 
-  Future<void> logout() async => await clearAuth();
+  Future<void> logout() async {
+    await clearAuth();
+    AuthGuard.setAuthState(authenticated: false);
+  }
 
   Future<AuthResponse> _parseAuthResponse(Map<String, dynamic> data, {String? fallbackRole}) async {
     final userMap = data['user'] as Map<String, dynamic>? ?? const <String, dynamic>{};
@@ -61,6 +76,11 @@ class ApiRepository {
       isProvider: isProvider,
       isAdmin: isAdmin,
       adminRole: adminRole,
+    );
+    AuthGuard.setAuthState(
+      authenticated: token.trim().isNotEmpty,
+      provider: isProvider,
+      admin: isAdmin,
     );
 
     return AuthResponse(
@@ -104,13 +124,55 @@ class ApiRepository {
   }
 
   // —— Services ——
-  Future<List<ServiceModel>> getServices({String? categoryId, String? q}) async {
+  Future<List<ServiceModel>> getServices({
+    String? categoryId,
+    String? q,
+    int? page,
+    int? limit,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
     final query = <String, dynamic>{};
     if (categoryId != null) query['categoryId'] = categoryId;
     if (q != null && q.isNotEmpty) query['q'] = q;
+    if (page != null && page > 0) query['page'] = page;
+    if (limit != null && limit > 0) query['limit'] = limit;
+    if (sortBy != null && sortBy.isNotEmpty) query['sortBy'] = sortBy;
+    if (sortOrder != null && sortOrder.isNotEmpty) query['sortOrder'] = sortOrder;
     final res = await _dio.get<List<dynamic>>('/services', queryParameters: query);
     final list = res.data ?? [];
     return list.map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<NearestProvidersResult> getNearestProviders({
+    required double lat,
+    required double lng,
+    int radiusMeters = 10000,
+    int limit = 10,
+    String? categoryId,
+  }) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/providers/nearest',
+      queryParameters: {
+        'lat': lat,
+        'lng': lng,
+        'radiusMeters': radiusMeters,
+        'limit': limit,
+        if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+      },
+    );
+
+    final d = res.data ?? const <String, dynamic>{};
+    final matched = d['matched'] as bool? ?? false;
+    final fallbackReason = d['fallbackReason']?.toString();
+    final list = (d['candidates'] as List<dynamic>? ?? const <dynamic>[])
+        .map((e) => NearestProviderCandidate.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return NearestProvidersResult(
+      matched: matched,
+      fallbackReason: fallbackReason,
+      candidates: list,
+    );
   }
 
   Future<ServiceModel?> getServiceById(String id) async {
@@ -404,6 +466,82 @@ class ProviderStatus {
   final bool isVerified;
   final bool hasPayoutMethod;
   final bool isActive;
+}
+
+class NearestProvidersResult {
+  NearestProvidersResult({
+    required this.matched,
+    required this.candidates,
+    this.fallbackReason,
+  });
+
+  final bool matched;
+  final String? fallbackReason;
+  final List<NearestProviderCandidate> candidates;
+}
+
+class NearestProviderCandidate {
+  NearestProviderCandidate({
+    required this.id,
+    required this.fullName,
+    required this.distanceMeters,
+    required this.services,
+    this.ratings = 0,
+    this.serviceArea,
+    this.isVerified = false,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String fullName;
+  final num ratings;
+  final int distanceMeters;
+  final String? serviceArea;
+  final bool isVerified;
+  final String? avatarUrl;
+  final List<NearestProviderService> services;
+
+  factory NearestProviderCandidate.fromJson(Map<String, dynamic> m) {
+    final services = (m['services'] as List<dynamic>? ?? const <dynamic>[])
+        .map((e) => NearestProviderService.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return NearestProviderCandidate(
+      id: (m['id'] ?? '').toString(),
+      fullName: (m['fullName'] ?? '').toString(),
+      ratings: (m['ratings'] as num?) ?? 0,
+      distanceMeters: ((m['distanceMeters'] as num?) ?? 0).round(),
+      serviceArea: m['serviceArea']?.toString(),
+      isVerified: m['isVerified'] as bool? ?? false,
+      avatarUrl: m['avatarUrl']?.toString(),
+      services: services,
+    );
+  }
+}
+
+class NearestProviderService {
+  NearestProviderService({
+    required this.id,
+    required this.title,
+    this.categoryId,
+    this.rating = 0,
+    this.pricePerHour = 0,
+  });
+
+  final String id;
+  final String title;
+  final String? categoryId;
+  final num rating;
+  final num pricePerHour;
+
+  factory NearestProviderService.fromJson(Map<String, dynamic> m) {
+    return NearestProviderService(
+      id: (m['id'] ?? '').toString(),
+      title: (m['title'] ?? '').toString(),
+      categoryId: m['categoryId']?.toString(),
+      rating: (m['rating'] as num?) ?? 0,
+      pricePerHour: (m['pricePerHour'] as num?) ?? 0,
+    );
+  }
 }
 
 class MessageThreadWithMessages {

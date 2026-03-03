@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 const _keyToken = 'auth_token';
 const _keyUserId = 'auth_user_id';
@@ -10,7 +10,17 @@ const _keyIsProvider = 'auth_user_is_provider';
 const _keyIsAdmin = 'auth_user_is_admin';
 const _keyAdminRole = 'auth_user_admin_role';
 
-Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
+const FlutterSecureStorage _storage = FlutterSecureStorage();
+
+String _boolToString(bool value) => value ? 'true' : 'false';
+
+bool? _stringToBool(String? value) {
+  if (value == null) return null;
+  final normalized = value.trim().toLowerCase();
+  if (normalized == 'true' || normalized == '1') return true;
+  if (normalized == 'false' || normalized == '0') return false;
+  return null;
+}
 
 Future<void> saveAuth({
   required String token,
@@ -23,92 +33,81 @@ Future<void> saveAuth({
   bool? isAdmin,
   String? adminRole,
 }) async {
-  final p = await _prefs();
-  await p.setString(_keyToken, token);
-  await p.setString(_keyUserId, userId);
-  await p.setString(_keyUserEmail, email);
-  await p.setString(_keyUserName, fullName);
+  await _storage.write(key: _keyToken, value: token);
+  await _storage.write(key: _keyUserId, value: userId);
+  await _storage.write(key: _keyUserEmail, value: email);
+  await _storage.write(key: _keyUserName, value: fullName);
   if (role != null) {
-    await p.setString(_keyUserRole, role);
+    await _storage.write(key: _keyUserRole, value: role);
   } else {
-    await p.remove(_keyUserRole);
+    await _storage.delete(key: _keyUserRole);
   }
   if (isCustomer != null) {
-    await p.setBool(_keyIsCustomer, isCustomer);
+    await _storage.write(key: _keyIsCustomer, value: _boolToString(isCustomer));
   } else {
-    await p.remove(_keyIsCustomer);
+    await _storage.delete(key: _keyIsCustomer);
   }
   if (isProvider != null) {
-    await p.setBool(_keyIsProvider, isProvider);
+    await _storage.write(key: _keyIsProvider, value: _boolToString(isProvider));
   } else {
-    await p.remove(_keyIsProvider);
+    await _storage.delete(key: _keyIsProvider);
   }
   if (isAdmin != null) {
-    await p.setBool(_keyIsAdmin, isAdmin);
+    await _storage.write(key: _keyIsAdmin, value: _boolToString(isAdmin));
   } else {
-    await p.remove(_keyIsAdmin);
+    await _storage.delete(key: _keyIsAdmin);
   }
   if (adminRole != null && adminRole.isNotEmpty) {
-    await p.setString(_keyAdminRole, adminRole);
+    await _storage.write(key: _keyAdminRole, value: adminRole);
   } else {
-    await p.remove(_keyAdminRole);
+    await _storage.delete(key: _keyAdminRole);
   }
 }
 
 Future<String?> getToken() async {
-  final p = await _prefs();
-  return p.getString(_keyToken);
+  return _storage.read(key: _keyToken);
 }
 
 Future<String?> getUserId() async {
-  final p = await _prefs();
-  return p.getString(_keyUserId);
+  return _storage.read(key: _keyUserId);
 }
 
 Future<String?> getUserEmail() async {
-  final p = await _prefs();
-  return p.getString(_keyUserEmail);
+  return _storage.read(key: _keyUserEmail);
 }
 
 Future<String?> getUserName() async {
-  final p = await _prefs();
-  return p.getString(_keyUserName);
+  return _storage.read(key: _keyUserName);
 }
 
 Future<String?> getUserRole() async {
-  final p = await _prefs();
-  return p.getString(_keyUserRole);
+  return _storage.read(key: _keyUserRole);
 }
 
 Future<bool?> getUserIsCustomer() async {
-  final p = await _prefs();
-  return p.containsKey(_keyIsCustomer) ? p.getBool(_keyIsCustomer) : null;
+  return _stringToBool(await _storage.read(key: _keyIsCustomer));
 }
 
 Future<bool?> getUserIsProvider() async {
-  final p = await _prefs();
-  return p.containsKey(_keyIsProvider) ? p.getBool(_keyIsProvider) : null;
+  return _stringToBool(await _storage.read(key: _keyIsProvider));
 }
 
 Future<bool?> getUserIsAdmin() async {
-  final p = await _prefs();
-  return p.containsKey(_keyIsAdmin) ? p.getBool(_keyIsAdmin) : null;
+  return _stringToBool(await _storage.read(key: _keyIsAdmin));
 }
 
 Future<String?> getUserAdminRole() async {
-  final p = await _prefs();
-  return p.getString(_keyAdminRole);
+  return _storage.read(key: _keyAdminRole);
 }
 
 Future<void> clearAuth() async {
-  final p = await _prefs();
-  await p.remove(_keyToken);
-  await p.remove(_keyUserId);
-  await p.remove(_keyUserEmail);
-  await p.remove(_keyUserName);
-  await p.remove(_keyUserRole);
-  await p.remove(_keyIsCustomer);
-  await p.remove(_keyIsProvider);
-  await p.remove(_keyIsAdmin);
-  await p.remove(_keyAdminRole);
+  await _storage.delete(key: _keyToken);
+  await _storage.delete(key: _keyUserId);
+  await _storage.delete(key: _keyUserEmail);
+  await _storage.delete(key: _keyUserName);
+  await _storage.delete(key: _keyUserRole);
+  await _storage.delete(key: _keyIsCustomer);
+  await _storage.delete(key: _keyIsProvider);
+  await _storage.delete(key: _keyIsAdmin);
+  await _storage.delete(key: _keyAdminRole);
 }

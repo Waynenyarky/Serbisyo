@@ -59,8 +59,10 @@ Dio createApiClient({String? token}) {
           );
         }
         if (error.response?.statusCode == 401) {
-          await clearAuth();
-          AuthGuard.requireLogin();
+          await AuthGuard.requireLogin(
+            clearSession: true,
+            message: 'Session expired. Please log in again.',
+          );
           return handler.next(
             DioException(
               requestOptions: error.requestOptions,

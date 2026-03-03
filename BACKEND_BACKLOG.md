@@ -22,9 +22,11 @@ Tracking scale:
 - **Feature BE-F01: OAuth + JWT auth contracts**
   - **Story BE-S01** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S01
-  - Acceptance: OAuth provider strategy + callback implemented; auth payload normalized to `{ user, token }` and user provider linkage added.
+  - Acceptance: OAuth provider strategy + callback implemented; mobile token-exchange endpoint added; auth payload normalized to `{ user, token }`; user provider linkage added.
+  - Verification: Integration smoke rerun passed (`/auth/oauth/google` returns `302` Google redirect; `/auth/oauth/google/mobile` returns expected `400` on empty body and `401` on invalid token).
   - Tasks:
     - Add OAuth provider strategy and callback endpoint. ✅
+    - Add mobile ID token exchange endpoint (`POST /api/auth/oauth/google/mobile`). ✅
     - Normalize auth response payload. ✅
     - Add provider account linkage in `Users` model using role booleans + optional `admin_role`. ✅
 

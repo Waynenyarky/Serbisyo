@@ -1,60 +1,69 @@
 # Serbisyo Mobile Backlog
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 ## Progress Snapshot
 - Stories: 12
-- Done: 0
-- Partial: 7
+- Done: 4
+- Partial: 3
 - Not Started: 5
-- Progress: 29.2%
+- Progress: 45.8%
 
 Tracking scale:
 - DONE = 1
 - PARTIAL = 0.5
 - NOT_STARTED = 0
 
+## Developer Notes (code scan 2026-03-03)
+- **Secure token storage:** ✅ Migrated auth storage to `flutter_secure_storage`.
+- **Auth guard behavior:** ✅ `AuthGuard.requireLogin()` now supports clearing session + pending login message.
+- **OAuth callback wiring:** ✅ Native Google sign-in wired using mobile ID token exchange endpoint.
+- **.env handling:** `.env` is listed in assets; avoid bundling secrets. Ensure `.env` is in `.gitignore`, keep `.env.example` in repo, and update README setup steps accordingly.
+- **401/global error handling:** ✅ API client routes 401 to centralized auth guard login flow.
+- **OAuth integration verification:** ✅ Backend/mobile OAuth smoke rerun passed for endpoint behavior (`302` redirect path and expected `400`/`401` validation outcomes on mobile token endpoint).
+- **Tests:** ⚠️ Current run covers existing widget test only. Add dedicated unit tests for `auth_storage`, `auth_guard`, and router redirect behavior next.
+
 ## Mobile Backlog
 
 ### Epic MB-E01: Authentication and Session UX
-**Progress:** 0 Done / 2 Partial / 0 Not Started (2 stories) → **50.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature MB-F01: Email/password and OAuth entry points**
-  - **Story MB-S01** `[-] PARTIAL`
+  - **Story MB-S01** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S01
-  - Update: Session integration completed auth contract parsing/storage refresh (`{ user, token }`, role booleans, `/auth/me` sync), but mobile OAuth callback flow is still not wired.
+  - Update: Native Google sign-in is wired through backend mobile token exchange endpoint, auth contract parsing/storage refresh remains in place, auth context persists in secure storage, and OAuth endpoint integration checks passed on rerun.
   - Tasks:
-    - Add OAuth button + loading/error states in auth screens. ⏳ (button present; full OAuth loading/error/callback flow pending)
-    - Extend auth provider/repository for OAuth endpoint. ⏳ (auth repository extended for `/auth/me`; OAuth mobile endpoint/callback integration pending)
-    - Persist token and role in secure storage. ✅ (token, role, role booleans, and `admin_role` persisted)
+    - Add OAuth button + loading/error states in auth screens. ✅
+    - Extend auth provider/repository for OAuth endpoint. ✅
+    - Persist token and role in secure storage. ✅
 
 - **Feature MB-F02: Role-aware routing and guarded screens**
-  - **Story MB-S02** `[-] PARTIAL`
+  - **Story MB-S02** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S02
-  - Update: Role-aware UI behavior now uses boolean-safe checks (`is_provider` etc.) in providers/shell/profile. Guard/forbidden-state completion remains.
+  - Update: Router now enforces auth-only public routes (`/login`, `/signup`) and provider routes show forbidden state for unauthorized users.
   - Tasks:
-    - Add route guards in app router. ⏳
+    - Add route guards in app router. ✅
     - Update bottom navigation based on `is_customer` / `is_provider` / `is_admin`. ✅
-    - Add forbidden-state component. ⏳
+    - Add forbidden-state component. ✅
 
 ### Epic MB-E02: Search and Discovery UX
-**Progress:** 0 Done / 2 Partial / 0 Not Started (2 stories) → **50.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature MB-F03: Search results and filters**
-  - **Story MB-S03** `[-] PARTIAL`
+  - **Story MB-S03** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S03
   - Tasks:
-    - Add filter chips and query state.
-    - Integrate paged results from services endpoint.
-    - Add skeleton loaders and retry action.
+    - Add filter chips and query state. ✅
+    - Integrate paged results from services endpoint. ✅
+    - Add skeleton loaders and retry action. ✅
 
 - **Feature MB-F04: Nearest provider booking UI**
-  - **Story MB-S04** `[-] PARTIAL`
+  - **Story MB-S04** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S04
   - Tasks:
-    - Integrate location permission and coordinate capture.
-    - Build nearest-match CTA + candidate result view.
-    - Add unavailable fallback UI.
+    - Integrate location permission and coordinate capture. ✅
+    - Build nearest-match CTA + candidate result view. ✅
+    - Add unavailable fallback UI. ✅
 
 ### Epic MB-E03: Booking Flow UX
 **Progress:** 0 Done / 1 Partial / 1 Not Started (2 stories) → **25.0%**
@@ -132,10 +141,10 @@ Tracking scale:
     - Add offline/no-network fallback messaging.
 
 ## Mobile P0 Queue
-- `MB-S01` `[-] PARTIAL`
-- `MB-S02` `[-] PARTIAL`
-- `MB-S03` `[-] PARTIAL`
-- `MB-S04` `[-] PARTIAL`
+- `MB-S01` `[x] DONE`
+- `MB-S02` `[x] DONE`
+- `MB-S03` `[x] DONE`
+- `MB-S04` `[x] DONE`
 - `MB-S05` `[-] PARTIAL`
 - `MB-S06` `[ ] NOT_STARTED`
 - `MB-S07` `[ ] NOT_STARTED`

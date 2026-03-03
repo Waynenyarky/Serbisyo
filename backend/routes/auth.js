@@ -1,12 +1,14 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
 const VALID_SIGNUP_ROLES = ['customer', 'provider'];
+const googleOauthClient = new OAuth2Client();
 
 function primaryRole(user) {
   if (user.is_admin) return 'admin';
@@ -142,6 +144,78 @@ router.get('/oauth/google/callback', (req, res, next) => {
     const token = issueToken(user);
     return res.json(authResponse(user, token));
   })(req, res, next);
+});
+
+router.post('/oauth/google/mobile', async (req, res) => {
+  try {
+    const { idToken, role: requestedRoleRaw } = req.body || {};
+    if (!idToken) {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    const requestedRole = (requestedRoleRaw || 'customer').toString().toLowerCase();
+    if (!VALID_SIGNUP_ROLES.includes(requestedRole)) {
+      return res.status(400).json({ error: 'Role must be customer or provider' });
+    }
+
+    const googleAudience = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_WEB_CLIENT_ID;
+    if (!googleAudience) {
+      return res.status(500).json({ error: 'Google OAuth audience is not configured on server' });
+    }
+
+    const ticket = await googleOauthClient.verifyIdToken({
+      idToken,
+      audience: googleAudience,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email?.toLowerCase();
+    const fullName = payload.name || payload.email;
+    if (!googleId || !email || !fullName) {
+      return res.status(401).json({ error: 'Google profile is missing required fields' });
+    }
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        email,
+        fullName,
+        is_customer: true,
+        is_provider: requestedRole === 'provider',
+        is_admin: false,
+        admin_role: null,
+        oauthProviders: {
+          google: {
+            id: googleId,
+            email,
+            linkedAt: new Date(),
+          },
+        },
+      });
+    } else {
+      user.fullName = user.fullName || fullName;
+      user.is_customer = true;
+      if (requestedRole === 'provider') {
+        user.is_provider = true;
+      }
+      user.oauthProviders = user.oauthProviders || {};
+      user.oauthProviders.google = {
+        id: googleId,
+        email,
+        linkedAt: user.oauthProviders?.google?.linkedAt || new Date(),
+      };
+      await user.save();
+    }
+
+    const token = issueToken(user);
+    return res.json(authResponse(user, token));
+  } catch (err) {
+    return res.status(401).json({ error: err.message || 'Google authentication failed' });
+  }
 });
 
 module.exports = router;
