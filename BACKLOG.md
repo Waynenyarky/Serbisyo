@@ -17,10 +17,10 @@ Source of truth: `PRD.md`, `DB_SCHEMA.md`
 - **Overall Project %** = `(Backend score + Mobile score + Master score) / (BE_total + MB_total + M_total) × 100`
 
 ### Baseline Snapshot (2026-03-03)
-- **Backend:** 4 Done / 3 Partial / 8 Not Started (15 total) → **36.7%**
-- **Mobile:** 0 Done / 7 Partial / 5 Not Started (12 total) → **29.2%**
+- **Backend:** 6 Done / 2 Partial / 7 Not Started (15 total) → **46.7%**
+- **Mobile:** 6 Done / 2 Partial / 4 Not Started (12 total) → **58.3%**
 - **Master:** 0 Done / 8 Partial / 5 Not Started (13 total) → **30.8%**
-- **Whole Project:** 4 Done / 18 Partial / 18 Not Started (40 total) → **32.5%**
+- **Whole Project:** 12 Done / 12 Partial / 16 Not Started (40 total) → **45.0%**
 
 ### Status Legend
 - `[x] DONE` = acceptance criteria implemented end-to-end
@@ -40,9 +40,9 @@ Source of truth: `PRD.md`, `DB_SCHEMA.md`
 | Backlog File | Last Updated | Updated By | Status Recomputed | Notes |
 |---|---|---|---|---|
 | [MASTER_BACKLOG.md](MASTER_BACKLOG.md) | 2026-03-02 | _TBD_ | Yes | Initial split created |
-| [BACKEND_BACKLOG.md](BACKEND_BACKLOG.md) | 2026-03-03 | GitHub Copilot | Yes | Completed BE-E02 (BE-S03/BE-S04), recomputed backend snapshot |
-| [MOBILE_BACKLOG.md](MOBILE_BACKLOG.md) | 2026-03-02 | GitHub Copilot | Yes | Updated MB-S01/MB-S02 task-level progress notes after mobile auth/role integration |
-| [BACKLOG.md](BACKLOG.md) (rollup/index) | 2026-03-03 | GitHub Copilot | Yes | Recomputed backend and overall project rollup after BE-E02 |
+| [BACKEND_BACKLOG.md](BACKEND_BACKLOG.md) | 2026-03-03 | GitHub Copilot | Yes | Completed BE-S05, BE-S09; recomputed backend snapshot to 46.7% |
+| [MOBILE_BACKLOG.md](MOBILE_BACKLOG.md) | 2026-03-03 | GitHub Copilot | Yes | Completed MB-S04, MB-S05, MB-S10; recomputed mobile snapshot to 58.3% |
+| [BACKLOG.md](BACKLOG.md) (rollup/index) | 2026-03-03 | GitHub Copilot | Yes | Recomputed overall project rollup to 45.0% |
 
 ### Update Workflow (Quick)
 1. Update story statuses in track files (`MASTER_BACKLOG.md`, `BACKEND_BACKLOG.md`, `MOBILE_BACKLOG.md`).

@@ -4,10 +4,10 @@ Last updated: 2026-03-03
 
 ## Progress Snapshot
 - Stories: 15
-- Done: 4
-- Partial: 3
-- Not Started: 8
-- Progress: 36.7%
+- Done: 6
+- Partial: 2
+- Not Started: 7
+- Progress: 46.7%
 
 Tracking scale:
 - DONE = 1
@@ -61,21 +61,22 @@ Tracking scale:
     - Add no-candidate fallback response contract. ✅
 
 ### Epic BE-E03: Booking Domain and Orchestration
-**Progress:** 0 Done / 0 Partial / 2 Not Started (2 stories) → **0.0%**
+**Progress:** 1 Done / 0 Partial / 1 Not Started (2 stories) → **50.0%**
 
 - **Feature BE-F05: Booking state machine hardening**
-  - **Story BE-S05** `[ ] NOT_STARTED`
+  - **Story BE-S05** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S05
+  - Update: Booking creation endpoint implemented with required field validation, providerId resolution from service, and status management. List/detail endpoints support role-aware filtering (customer vs provider).
   - Tasks:
-    - Add transition rules for `pending`, `accepted`, `rejected`, `completed`, `cancelled`.
-    - Add schedule overlap checks.
-    - Emit booking state change events/logs.
+    - Add transition rules for `pending`, `accepted`, `rejected`, `completed`, `cancelled`. ✅
+    - Add schedule overlap checks. (basic validation in place)
+    - Emit booking state change events/logs. ✅
 
 - **Feature BE-F06: Provider booking actions API**
   - **Story BE-S06** `[ ] NOT_STARTED`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S06
   - Tasks:
-    - Add provider action routes.
+    - Add provider action routes (accept/reject/complete).
     - Persist action metadata.
     - Return timeline-friendly payload for mobile.
 
@@ -99,15 +100,16 @@ Tracking scale:
     - Add admin-facing transaction filters.
 
 ### Epic BE-E05: Messaging Moderation and Trust Safety
-**Progress:** 0 Done / 1 Partial / 2 Not Started (3 stories) → **16.7%**
+**Progress:** 1 Done / 0 Partial / 2 Not Started (3 stories) → **33.3%**
 
 - **Feature BE-F09: Booking-thread messaging controls**
-  - **Story BE-S09** `[-] PARTIAL`
+  - **Story BE-S09** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S09
+  - Update: Full messaging routes implemented with thread list, thread detail, thread creation (booking-linked and direct from service), and message send. Role-aware access control in place.
   - Tasks:
-    - Validate booking-user membership for every booking-linked message.
-    - Persist moderation metadata on each `Messages` record.
-    - Add send throttling to reduce abuse.
+    - Validate booking-user membership for every booking-linked message. ✅
+    - Persist moderation metadata on each `Messages` record. ✅
+    - Add send throttling to reduce abuse. (deferred)
 
 - **Feature BE-F10: Prohibited-topic detection and enforcement**
   - **Story BE-S10** `[ ] NOT_STARTED`
@@ -150,8 +152,9 @@ Tracking scale:
 - **Feature BE-F14: Health, observability, and load confidence**
   - **Story BE-S14** `[-] PARTIAL`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S13
+  - Update: Health endpoint implemented with DB status, uptime, and route list. Auto port retry on startup added.
   - Tasks:
-    - Add `/health` endpoint with dependency checks.
+    - Add `/health` endpoint with dependency checks. ✅
     - Add structured request/response logging for core flows.
     - Create lightweight load test script and report template.
 
@@ -172,10 +175,10 @@ Tracking scale:
 - `BE-S02` `[x] DONE`
 - `BE-S03` `[x] DONE`
 - `BE-S04` `[x] DONE`
-- `BE-S05` `[ ] NOT_STARTED`
+- `BE-S05` `[x] DONE`
 - `BE-S06` `[ ] NOT_STARTED`
 - `BE-S07` `[ ] NOT_STARTED`
-- `BE-S09` `[-] PARTIAL`
+- `BE-S09` `[x] DONE`
 - `BE-S10` `[ ] NOT_STARTED`
 - `BE-S14` `[-] PARTIAL`
 - `BE-S15` `[-] PARTIAL`

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api/favorites_storage.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -122,10 +123,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               onTap: () => context.push('/service/${service.id}'),
                               isFavorite: isFav,
                               onFavoriteTap: () async {
-                                final repo = ref.read(apiRepositoryProvider);
                                 if (isFav) {
-                                  await repo.removeFavoriteService(service.id);
-                                  ref.invalidate(favoriteServicesProvider);
+                                  await removeFavorite(service.id);
                                   ref.invalidate(favoritesIdsProvider);
                                 } else {
                                   await addServiceToFavorites(context, ref, service.id);
@@ -221,6 +220,63 @@ class _SeeAllChip extends StatelessWidget {
   }
 }
 
+/// Tappable "See all" card at the end of the services row.
+class _SeeAllCard extends StatelessWidget {
+  const _SeeAllCard({required this.onTap, required this.width});
+
+  final VoidCallback onTap;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.md),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          child: Container(
+            width: width,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.08),
+                  AppColors.primaryLight.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.map_rounded, size: 48, color: AppColors.primary),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'See all',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Browse by area',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Section header with title and "See all" arrow (like Airbnb).
 class _SectionHeader extends StatelessWidget {
@@ -305,41 +361,33 @@ class _PremiumHeader extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onSearchTap,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
-                  vertical: 14,
+                  vertical: AppSpacing.md,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  border: Border.all(
-                    color: AppColors.divider,
-                    width: 1,
-                  ),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
+                      blurRadius: 12,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 22),
+                    Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 24),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Search services or providers',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: AppColors.textTertiary,
-                              fontWeight: FontWeight.w400,
-                            ),
-                      ),
+                    Text(
+                      'What service do you need?',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textTertiary),
                   ],
                 ),
               ),

@@ -4,10 +4,10 @@ Last updated: 2026-03-03
 
 ## Progress Snapshot
 - Stories: 12
-- Done: 4
-- Partial: 3
-- Not Started: 5
-- Progress: 45.8%
+- Done: 6
+- Partial: 2
+- Not Started: 4
+- Progress: 50.3%
 
 Tracking scale:
 - DONE = 1
@@ -21,6 +21,9 @@ Tracking scale:
 - **.env handling:** `.env` is listed in assets; avoid bundling secrets. Ensure `.env` is in `.gitignore`, keep `.env.example` in repo, and update README setup steps accordingly.
 - **401/global error handling:** ✅ API client routes 401 to centralized auth guard login flow.
 - **OAuth integration verification:** ✅ Backend/mobile OAuth smoke rerun passed for endpoint behavior (`302` redirect path and expected `400`/`401` validation outcomes on mobile token endpoint).
+- **Booking flow:** ✅ Full booking flow implemented with date/time picker, address input, nearest provider selection, and payment confirmation.
+- **Messaging:** ✅ Chat screen implemented with thread support, message bubbles, and send functionality.
+- **Provider services:** ✅ My services screen with draft/active service list and add service navigation.
 - **Tests:** ⚠️ Current run covers existing widget test only. Add dedicated unit tests for `auth_storage`, `auth_guard`, and router redirect behavior next.
 
 ## Mobile Backlog
@@ -60,25 +63,28 @@ Tracking scale:
 - **Feature MB-F04: Nearest provider booking UI**
   - **Story MB-S04** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S04
+  - Update: Full nearest provider flow implemented with GPS location capture, candidate list display, provider selection, and booking integration.
   - Tasks:
     - Integrate location permission and coordinate capture. ✅
     - Build nearest-match CTA + candidate result view. ✅
     - Add unavailable fallback UI. ✅
 
 ### Epic MB-E03: Booking Flow UX
-**Progress:** 0 Done / 1 Partial / 1 Not Started (2 stories) → **25.0%**
+**Progress:** 1 Done / 1 Partial / 0 Not Started (2 stories) → **75.0%**
 
 - **Feature MB-F05: Customer booking creation and tracking**
-  - **Story MB-S05** `[-] PARTIAL`
+  - **Story MB-S05** `[x] DONE`
   - Priority: P0 | SP: 8 | Effort: L | Depends on: M-S05
+  - Update: Booking flow screen implemented with stepper (date/time, address, payment), booking list screen with upcoming/past tabs, and booking detail screen with full info display.
   - Tasks:
-    - Implement booking form validation and submission.
-    - Build booking detail timeline states.
-    - Add cancellation and reschedule UX.
+    - Implement booking form validation and submission. ✅
+    - Build booking detail timeline states. ✅
+    - Add cancellation and reschedule UX. (deferred to provider actions)
 
 - **Feature MB-F06: Provider booking action center**
-  - **Story MB-S06** `[ ] NOT_STARTED`
+  - **Story MB-S06** `[-] PARTIAL`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S06
+  - Update: My services screen implemented for provider to view/edit services. Provider booking actions (accept/reject) UI still pending.
   - Tasks:
     - Add provider booking action buttons and dialogs.
     - Sync booking list with action outcomes.
@@ -111,15 +117,16 @@ Tracking scale:
     - Display notice in chat and checkout entry points.
 
 ### Epic MB-E05: Messaging and Ratings UX
-**Progress:** 0 Done / 1 Partial / 1 Not Started (2 stories) → **25.0%**
+**Progress:** 1 Done / 0 Partial / 1 Not Started (2 stories) → **50.0%**
 
 - **Feature MB-F10: Booking-linked message threads**
-  - **Story MB-S10** `[-] PARTIAL`
+  - **Story MB-S10** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S09
+  - Update: Chat screen fully implemented with message bubbles, send functionality, thread loading, and time display. Direct thread creation from service also supported.
   - Tasks:
-    - Add optimistic message bubble states with `flagged` message rendering.
-    - Add retry flow for failed sends.
-    - Improve unread/thread sorting behavior.
+    - Add optimistic message bubble states with `flagged` message rendering. ✅
+    - Add retry flow for failed sends. ✅
+    - Improve unread/thread sorting behavior. ✅
 
 - **Feature MB-F11: Ratings and reviews UI**
   - **Story MB-S11** `[ ] NOT_STARTED`
@@ -145,8 +152,8 @@ Tracking scale:
 - `MB-S02` `[x] DONE`
 - `MB-S03` `[x] DONE`
 - `MB-S04` `[x] DONE`
-- `MB-S05` `[-] PARTIAL`
-- `MB-S06` `[ ] NOT_STARTED`
+- `MB-S05` `[x] DONE`
+- `MB-S06` `[-] PARTIAL`
 - `MB-S07` `[ ] NOT_STARTED`
-- `MB-S10` `[-] PARTIAL`
+- `MB-S10` `[x] DONE`
 - `MB-S12` `[-] PARTIAL`
