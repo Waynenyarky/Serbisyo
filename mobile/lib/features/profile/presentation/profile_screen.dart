@@ -61,7 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _ProviderExploreCard(
                 userAsync: userAsync,
                 providerStatusAsync: providerStatusAsync,
-                onBecomeHost: () => context.push('/provider/onboarding'),
+                onBecomeHost: () => context.push('/signup?role=provider'),
                 onCompleteService: () => context.push('/provider/onboarding'),
                 onMyServices: () => context.push('/provider/services'),
               ),
