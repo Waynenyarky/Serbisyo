@@ -115,6 +115,9 @@ class CurrentUser {
   final String email;
   /// 'customer' | 'provider' | 'admin'
   final String? role;
+
+  /// Returns true if the user has a provider/host role.
+  bool get isProviderRole => role == 'provider' || role == 'host';
 }
 
 /// Extended profile (Get Started) data from local storage.
@@ -152,6 +155,15 @@ class ProfileExtended {
 
 /// Set of favorited service IDs (persisted locally).
 final favoritesIdsProvider = FutureProvider<Set<String>>((ref) => getFavoriteServiceIds());
+
+/// Full ServiceModel objects for all favorited service IDs.
+final favoriteServicesProvider = FutureProvider<List<ServiceModel>>((ref) async {
+  final ids = await ref.watch(favoritesIdsProvider.future);
+  if (ids.isEmpty) return [];
+  final all = await ref.watch(servicesProvider(null).future);
+  final byId = {for (var s in all) s.id: s};
+  return ids.map((id) => byId[id]).whereType<ServiceModel>().toList();
+});
 
 /// Name of the current favorite list, if set.
 final favoriteListNameProvider = FutureProvider<String?>((ref) => getFavoriteListName());
