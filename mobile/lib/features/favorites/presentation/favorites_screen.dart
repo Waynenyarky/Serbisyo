@@ -11,20 +11,12 @@ import '../../../shared/widgets/create_favorite_sheet.dart';
 import '../../../shared/widgets/premium_service_image.dart';
 import '../../../shared/widgets/service_card.dart';
 
-/// Services that are in the user's favorites (IDs from storage, details from API).
-final favoritesServicesProvider = FutureProvider<List<ServiceModel>>((ref) async {
-  final ids = await ref.watch(favoritesIdsProvider.future);
-  if (ids.isEmpty) return [];
-  final allServices = await ref.watch(servicesProvider(null).future);
-  return allServices.where((s) => ids.contains(s.id)).toList();
-});
-
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final favoritesAsync = ref.watch(favoritesServicesProvider);
+    final favoritesAsync = ref.watch(favoriteServicesProvider);
     final recentlyViewedAsync = ref.watch(recentlyViewedServicesProvider);
     final listNameAsync = ref.watch(favoriteListNameProvider);
 
@@ -124,7 +116,7 @@ class FavoritesScreen extends ConsumerWidget {
                 Text('Could not load favorites', style: Theme.of(context).textTheme.bodyLarge),
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: () => ref.invalidate(favoritesServicesProvider),
+                  onPressed: () => ref.invalidate(favoriteServicesProvider),
                   child: const Text('Retry'),
                 ),
               ],

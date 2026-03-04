@@ -21,6 +21,8 @@ class ShellScaffold extends ConsumerWidget {
     final isProvider = userAsync.valueOrNull?.isProviderRole ?? false;
     final favoritesAsync = ref.watch(favoritesIdsProvider);
     final favoriteCount = favoritesAsync.valueOrNull?.length ?? 0;
+    final threadsAsync = ref.watch(threadsProvider);
+    final unreadMessages = threadsAsync.valueOrNull?.fold<int>(0, (sum, t) => sum + t.unreadCount) ?? 0;
 
     return Scaffold(
       body: navigationShell,
@@ -73,6 +75,7 @@ class ShellScaffold extends ConsumerWidget {
                   index: 3,
                   currentIndex: navigationShell.currentIndex,
                   onTap: () => _onTap(context, 3),
+                  badgeCount: unreadMessages > 0 ? unreadMessages : null,
                 ),
                 _NavItem(
                   icon: Icons.person_outline_rounded,

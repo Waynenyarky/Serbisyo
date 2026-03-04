@@ -12,6 +12,8 @@ class ServiceCard extends StatelessWidget {
     required this.onTap,
     this.isFavorite = false,
     this.onFavoriteTap,
+    this.dense = false,
+    this.imageAspectRatio = 16 / 10,
     super.key,
   });
 
@@ -19,9 +21,20 @@ class ServiceCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isFavorite;
   final VoidCallback? onFavoriteTap;
+  /// Compact layout for grid tiles and small screens.
+  final bool dense;
+  /// Image ratio for the card header (width / height).
+  final double imageAspectRatio;
 
   @override
   Widget build(BuildContext context) {
+    final titleStyle = dense
+        ? Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
+        : Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600);
+    final pad = dense ? 10.0 : AppSpacing.md;
+    final titleMaxLines = dense ? 2 : 1;
+    final vGap = dense ? 4.0 : 6.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -34,8 +47,8 @@ class ServiceCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                blurRadius: dense ? 10 : 12,
+                offset: dense ? const Offset(0, 3) : const Offset(0, 4),
               ),
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -56,7 +69,7 @@ class ServiceCard extends StatelessWidget {
                       top: Radius.circular(AppSpacing.radiusLg),
                     ),
                     child: AspectRatio(
-                      aspectRatio: 16 / 10,
+                      aspectRatio: imageAspectRatio,
                       child: PremiumServiceImage(
                         width: double.infinity,
                         height: double.infinity,
@@ -74,7 +87,7 @@ class ServiceCard extends StatelessWidget {
                           onTap: onFavoriteTap,
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: EdgeInsets.all(dense ? 7 : 8),
                             decoration: BoxDecoration(
                               color: Colors.black.withValues(alpha: 0.35),
                               shape: BoxShape.circle,
@@ -82,7 +95,7 @@ class ServiceCard extends StatelessWidget {
                             child: Icon(
                               isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                               color: isFavorite ? AppColors.error : Colors.white,
-                              size: 22,
+                              size: dense ? 20 : 22,
                             ),
                           ),
                         ),
@@ -91,24 +104,22 @@ class ServiceCard extends StatelessWidget {
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(pad),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       service.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                      maxLines: 1,
+                      style: titleStyle,
+                      maxLines: titleMaxLines,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: vGap),
                     Row(
                       children: [
                         Icon(
                           Icons.star_rounded,
-                          size: 18,
+                          size: dense ? 16 : 18,
                           color: AppColors.warning,
                         ),
                         const SizedBox(width: 4),
@@ -120,12 +131,12 @@ class ServiceCard extends StatelessWidget {
                               ),
                         ),
                         Text(
-                          ' (${service.reviewCount} reviews)',
+                          dense ? ' (${service.reviewCount})' : ' (${service.reviewCount} reviews)',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: vGap),
                     Text(
                       '₱${service.pricePerHour.toStringAsFixed(0)}/hr · ${service.providerName}',
                       style: Theme.of(context).textTheme.bodySmall,

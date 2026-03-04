@@ -77,7 +77,7 @@ final threadsProvider = FutureProvider<List<MessageThreadModel>>((ref) async {
 /// Only fetches when current user role is 'provider'.
 final providerStatusProvider = FutureProvider<ProviderStatus?>((ref) async {
   final user = await ref.watch(currentUserProvider.future);
-  if (!(user?.isProvider ?? false)) return null;
+  if (user?.role != 'provider') return null;
   try {
     return await ref.read(apiRepositoryProvider).getProviderStatus();
   } catch (_) {
@@ -96,71 +96,25 @@ final myServicesProvider = FutureProvider<List<ServiceModel>>((ref) async {
 
 /// Current logged-in user (name, email, role) from secure storage. Null if not logged in.
 final currentUserProvider = FutureProvider<CurrentUser?>((ref) async {
-  Future<CurrentUser?> readStoredUser() async {
-    final name = await getUserName();
-    final email = await getUserEmail();
-    final role = await getUserRole();
-    final isCustomer = await getUserIsCustomer();
-    final isProvider = await getUserIsProvider();
-    final isAdmin = await getUserIsAdmin();
-    final adminRole = await getUserAdminRole();
-    if ((name == null || name.isEmpty) && (email == null || email.isEmpty)) {
-      return null;
-    }
-    return CurrentUser(
-      name: name?.trim().isNotEmpty == true ? name! : 'User',
-      email: email?.trim().isNotEmpty == true ? email! : '',
-      role: role,
-      isCustomer: isCustomer,
-      isProvider: isProvider,
-      isAdmin: isAdmin,
-      adminRole: adminRole,
-    );
+  final name = await getUserName();
+  final email = await getUserEmail();
+  final role = await getUserRole();
+  if ((name == null || name.isEmpty) && (email == null || email.isEmpty)) {
+    return null;
   }
-
-  final token = await getToken();
-  if (token == null || token.isEmpty) {
-    return readStoredUser();
-  }
-
-  try {
-    final me = await ref.read(apiRepositoryProvider).getMe();
-    return CurrentUser(
-      name: me.user.fullName.trim().isNotEmpty ? me.user.fullName : 'User',
-      email: me.user.email,
-      role: me.user.role,
-      isCustomer: me.user.isCustomer,
-      isProvider: me.user.isProvider,
-      isAdmin: me.user.isAdmin,
-      adminRole: me.user.adminRole,
-    );
-  } catch (_) {
-    return readStoredUser();
-  }
+  return CurrentUser(
+    name: name?.trim().isNotEmpty == true ? name! : 'User',
+    email: email?.trim().isNotEmpty == true ? email! : '',
+    role: role,
+  );
 });
 
 class CurrentUser {
-  const CurrentUser({
-    required this.name,
-    required this.email,
-    this.role,
-    this.isCustomer,
-    this.isProvider,
-    this.isAdmin,
-    this.adminRole,
-  });
+  const CurrentUser({required this.name, required this.email, this.role});
   final String name;
   final String email;
   /// 'customer' | 'provider' | 'admin'
   final String? role;
-  final bool? isCustomer;
-  final bool? isProvider;
-  final bool? isAdmin;
-  final String? adminRole;
-
-  bool get isProviderRole => isProvider ?? role == 'provider';
-  bool get isAdminRole => isAdmin ?? role == 'admin';
-  bool get isCustomerRole => isCustomer ?? (!isProviderRole && !isAdminRole);
 }
 
 /// Extended profile (Get Started) data from local storage.

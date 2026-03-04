@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/api/auth_guard.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/booking/presentation/bookings_screen.dart';
@@ -19,7 +18,6 @@ import '../../features/provider/presentation/provider_onboarding_screen.dart';
 import '../../features/provider/presentation/my_services_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../core/models/service_model.dart';
-import '../../shared/widgets/forbidden_state.dart';
 import 'shell_scaffold.dart';
 
 /// Premium entrance transition for Search: fade + slide up + subtle scale.
@@ -73,23 +71,6 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: initialLocation,
-    refreshListenable: AuthGuard.authVersion,
-    redirect: (context, state) {
-      final path = state.uri.path;
-      final isPublicAuthRoute = path == '/login' || path == '/signup';
-      final isProviderRoute = path.startsWith('/provider/');
-
-      if (!AuthGuard.isAuthenticated && !isPublicAuthRoute) {
-        return '/login';
-      }
-      if (AuthGuard.isAuthenticated && isPublicAuthRoute) {
-        return '/';
-      }
-      if (AuthGuard.isAuthenticated && isProviderRoute && !AuthGuard.isProvider && !AuthGuard.isAdmin) {
-        return '/forbidden';
-      }
-      return null;
-    },
     routes: [
       GoRoute(
         path: '/login',
@@ -159,11 +140,6 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
           key: state.pageKey,
           child: const SearchScreen(),
         ),
-      ),
-      GoRoute(
-        path: '/forbidden',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ForbiddenStateScreen(),
       ),
       GoRoute(
         path: '/explore',

@@ -77,7 +77,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     final thread = filtered[index];
                     return _MessageTile(
                       thread: thread,
-                      onTap: () => context.push('/messages/${thread.id}'),
+                      onTap: () async {
+                        await context.push('/messages/${thread.id}');
+                        if (!context.mounted) return;
+                        ref.invalidate(threadsProvider);
+                      },
                     );
                   },
                 );

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/favorites_storage.dart';
-import '../../../core/models/service_model.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -57,6 +56,70 @@ class _SuggestedCategoryTile extends StatelessWidget {
   }
 }
 
+/// Legacy tile for non-category suggestions (e.g. Nearby).
+class _SuggestedDestinationTile extends StatelessWidget {
+  const _SuggestedDestinationTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: Icon(icon, color: AppColors.textSecondary, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -476,7 +539,7 @@ class _SuggestedCategoriesSection extends ConsumerWidget {
           )),
         ],
       ),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }
@@ -525,7 +588,7 @@ class _FormRow extends StatelessWidget {
   }
 }
 
-class _SearchResultsSection extends ConsumerStatefulWidget {
+class _SearchResultsSection extends ConsumerWidget {
   const _SearchResultsSection({
     required this.whereQuery,
     this.selectedCategoryId,
@@ -535,212 +598,66 @@ class _SearchResultsSection extends ConsumerStatefulWidget {
   final String? selectedCategoryId;
 
   @override
-  ConsumerState<_SearchResultsSection> createState() => _SearchResultsSectionState();
-}
-
-class _SearchResultsSectionState extends ConsumerState<_SearchResultsSection> {
-  static const int _pageSize = 10;
-
-  final List<_SortOption> _sortOptions = const [
-    _SortOption(label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc'),
-    _SortOption(label: 'Top rated', sortBy: 'rating', sortOrder: 'desc'),
-    _SortOption(label: 'Price: Low', sortBy: 'pricePerHour', sortOrder: 'asc'),
-    _SortOption(label: 'Price: High', sortBy: 'pricePerHour', sortOrder: 'desc'),
-  ];
-
-  late _SortOption _selectedSort;
-  int _page = 1;
-  bool _loading = false;
-  bool _loadingMore = false;
-  bool _hasMore = true;
-  String? _error;
-  List<ServiceModel> _results = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedSort = _sortOptions.first;
-    _fetch(reset: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _SearchResultsSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.whereQuery != widget.whereQuery ||
-        oldWidget.selectedCategoryId != widget.selectedCategoryId) {
-      _fetch(reset: true);
-    }
-  }
-
-  Future<void> _fetch({required bool reset}) async {
-    if (_loading || _loadingMore) return;
-    setState(() {
-      if (reset) {
-        _loading = true;
-        _error = null;
-        _page = 1;
-        _results = const [];
-        _hasMore = true;
-      } else {
-        _loadingMore = true;
-        _error = null;
-      }
-    });
-    try {
-      final nextPage = reset ? 1 : _page + 1;
-      final pageItems = await ref.read(apiRepositoryProvider).getServices(
-            categoryId: widget.selectedCategoryId,
-            q: widget.selectedCategoryId != null
-                ? null
-                : (widget.whereQuery.isEmpty ? null : widget.whereQuery),
-            page: nextPage,
-            limit: _pageSize,
-            sortBy: _selectedSort.sortBy,
-            sortOrder: _selectedSort.sortOrder,
+  Widget build(BuildContext context, WidgetRef ref) {
+    // When a category was tapped in suggestions, filter by category from API; otherwise search by query (API).
+    final servicesAsync = selectedCategoryId != null
+        ? ref.watch(servicesProvider(selectedCategoryId))
+        : ref.watch(searchResultsProvider(whereQuery.isEmpty ? null : whereQuery));
+    return servicesAsync.when(
+      data: (results) {
+        if (results.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Center(
+              child: Text(
+                'No results found',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
           );
-      if (!mounted) return;
-      setState(() {
-        _page = nextPage;
-        _results = reset ? pageItems : [..._results, ...pageItems];
-        _hasMore = pageItems.length >= _pageSize;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Could not load results');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _loadingMore = false;
-        });
-      } else {
-        _loading = false;
-        _loadingMore = false;
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final results = _results;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Results',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _sortOptions
-              .map(
-                (option) => ChoiceChip(
-                  label: Text(option.label),
-                  selected: _selectedSort == option,
-                  onSelected: (selected) {
-                    if (!selected) return;
-                    setState(() => _selectedSort = option);
-                    _fetch(reset: true);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Results',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: results.length,
+              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+              itemBuilder: (context, index) {
+                final service = results[index];
+                final isFav = ref.watch(isFavoriteProvider(service.id));
+                return ServiceCard(
+                  service: service,
+                  onTap: () => context.push('/service/${service.id}'),
+                  isFavorite: isFav,
+                  onFavoriteTap: () async {
+                    if (isFav) {
+                      await removeFavorite(service.id);
+                      ref.invalidate(favoritesIdsProvider);
+                    } else {
+                      await addServiceToFavorites(context, ref, service.id);
+                    }
                   },
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (_loading && results.isEmpty) ...[
-          ...List.generate(
-            3,
-            (index) => Container(
-              margin: const EdgeInsets.only(bottom: AppSpacing.md),
-              height: 112,
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
+                );
+              },
             ),
-          ),
-        ] else if (_error != null && results.isEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _error!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                OutlinedButton.icon(
-                  onPressed: () => _fetch(reset: true),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ] else if (results.isEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              'No results found',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
-            ),
-          ),
-        ] else ...[
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: results.length,
-            separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-            itemBuilder: (context, index) {
-              final service = results[index];
-              final isFav = ref.watch(isFavoriteProvider(service.id));
-              return ServiceCard(
-                service: service,
-                onTap: () => context.push('/service/${service.id}'),
-                isFavorite: isFav,
-                onFavoriteTap: () async {
-                  if (isFav) {
-                    await removeFavorite(service.id);
-                    ref.invalidate(favoritesIdsProvider);
-                  } else {
-                    await addServiceToFavorites(context, ref, service.id);
-                  }
-                },
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (_hasMore)
-            Align(
-              alignment: Alignment.center,
-              child: OutlinedButton(
-                onPressed: _loadingMore ? null : () => _fetch(reset: false),
-                child: _loadingMore
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Load more'),
-              ),
-            ),
-        ],
-      ],
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      ),
+      error: (err, stack) => Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text('Could not load results', style: TextStyle(color: AppColors.error)),
+      ),
     );
   }
-}
-
-class _SortOption {
-  const _SortOption({
-    required this.label,
-    required this.sortBy,
-    required this.sortOrder,
-  });
-
-  final String label;
-  final String sortBy;
-  final String sortOrder;
 }

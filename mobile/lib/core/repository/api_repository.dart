@@ -263,14 +263,14 @@ class ApiRepository {
 
   static ServiceModel _serviceFromJson(Map<String, dynamic> m) {
     return ServiceModel(
-      id: m['id'] as String,
-      title: m['title'] as String,
-      categoryId: m['categoryId']?.toString() ?? '',
+      id: (m['id'] ?? m['_id'] ?? '').toString(),
+      title: (m['title'] ?? '').toString(),
+      categoryId: (m['categoryId'] ?? m['category'] ?? '').toString(),
       imageUrl: m['imageUrl'] as String?,
       rating: (m['rating'] as num?)?.toDouble() ?? 0,
       reviewCount: (m['reviewCount'] as num?)?.toInt() ?? 0,
       pricePerHour: (m['pricePerHour'] as num?)?.toDouble() ?? 0,
-      providerName: m['providerName'] as String,
+      providerName: (m['providerName'] ?? m['provider']?['fullName'] ?? '').toString(),
       description: m['description'] as String?,
       providerId: m['providerId']?.toString(),
       status: m['status'] as String?,
