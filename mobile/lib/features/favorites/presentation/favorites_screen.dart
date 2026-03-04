@@ -362,7 +362,9 @@ class _SavedList extends StatelessWidget {
           onTap: () => context.push('/service/${service.id}'),
           isFavorite: isFav,
           onFavoriteTap: () async {
-            await removeFavorite(service.id);
+            final repo = ref.read(apiRepositoryProvider);
+            await repo.removeFavoriteService(service.id);
+            ref.invalidate(favoriteServicesProvider);
             ref.invalidate(favoritesIdsProvider);
           },
         );

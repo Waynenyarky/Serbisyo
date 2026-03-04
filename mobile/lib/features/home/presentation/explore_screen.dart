@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/favorites_storage.dart';
 import '../../../core/models/service_model.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -258,13 +257,15 @@ class ExploreScreen extends ConsumerWidget {
                               onTap: () => context.push('/service/${service.id}'),
                               isFavorite: isFav,
                               onFavoriteTap: () async {
-                                if (isFav) {
-                                  await removeFavorite(service.id);
-                                  ref.invalidate(favoritesIdsProvider);
-                                } else {
-                                  await addServiceToFavorites(context, ref, service.id);
-                                }
-                              },
+                              final repo = ref.read(apiRepositoryProvider);
+                              if (isFav) {
+                                await repo.removeFavoriteService(service.id);
+                                ref.invalidate(favoriteServicesProvider);
+                                ref.invalidate(favoritesIdsProvider);
+                              } else {
+                                await addServiceToFavorites(context, ref, service.id);
+                              }
+                            },
                             ),
                           );
                         },

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _keyFavorites = 'favorites_service_ids';
 const _keyFavoriteNames = 'favorites_names';
 const _keyFavoriteListName = 'favorite_list_name';
+const _keyFavoritesMigrated = 'favorites_migrated_backend';
 
 Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
 
@@ -107,4 +108,15 @@ Future<void> toggleFavorite(String serviceId) async {
 Future<bool> isFavorite(String serviceId) async {
   final ids = await getFavoriteServiceIds();
   return ids.contains(serviceId);
+}
+
+/// Whether local favorites have been migrated to the backend for this device.
+Future<bool> hasMigratedFavoritesToBackend() async {
+  final p = await _prefs();
+  return p.getBool(_keyFavoritesMigrated) ?? false;
+}
+
+Future<void> markFavoritesMigratedToBackend() async {
+  final p = await _prefs();
+  await p.setBool(_keyFavoritesMigrated, true);
 }

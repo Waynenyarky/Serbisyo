@@ -10,6 +10,7 @@ const servicesRoutes = require('./routes/services');
 const bookingsRoutes = require('./routes/bookings');
 const messagesRoutes = require('./routes/messages');
 const providersRoutes = require('./routes/providers');
+const favoritesRoutes = require('./routes/favorites');
 
 const app = express();
 const BASE_PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -27,6 +28,7 @@ const routes = [
   { path: '/api/services', name: 'Services' },
   { path: '/api/bookings', name: 'Bookings' },
   { path: '/api/messages', name: 'Messages' },
+  { path: '/api/favorites', name: 'Favorites' },
   { path: '/api/providers', name: 'Providers (me/status, me profile)' },
 ];
 
@@ -36,6 +38,7 @@ app.use('/api/services', servicesRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/providers', providersRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 // Health: returns real DB status and server info
 app.get('/api/health', (req, res) => {

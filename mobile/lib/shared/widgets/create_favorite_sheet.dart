@@ -14,19 +14,23 @@ Future<void> addServiceToFavorites(
   WidgetRef ref,
   String serviceId,
 ) async {
+  final repo = ref.read(apiRepositoryProvider);
   final noListYet = await hasNoFavoriteListYet();
   if (!context.mounted) return;
   if (noListYet) {
     await showCreateFavoriteSheet(
       context,
       serviceId: serviceId,
-      onCreated: () {
+      onCreated: () async {
+        await repo.addFavoriteService(serviceId);
+        ref.invalidate(favoriteServicesProvider);
         ref.invalidate(favoritesIdsProvider);
         ref.invalidate(favoriteListNameProvider);
       },
     );
   } else {
-    await addFavorite(serviceId);
+    await repo.addFavoriteService(serviceId);
+    ref.invalidate(favoriteServicesProvider);
     ref.invalidate(favoritesIdsProvider);
     final name = await getFavoriteListName();
     if (!context.mounted) return;
@@ -85,7 +89,7 @@ class _CreateFavoriteSheetContentState extends State<_CreateFavoriteSheetContent
     final name = _nameController.text.trim();
     final listName = name.isEmpty ? 'Saved' : name;
     await setFavoriteListName(listName);
-    await addFavorite(widget.serviceId);
+    await setFavoriteName(widget.serviceId, listName);
     if (!mounted) return;
     widget.onCreated();
     Navigator.of(context).pop();

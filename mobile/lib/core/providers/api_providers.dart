@@ -115,6 +115,9 @@ class CurrentUser {
   final String email;
   /// 'customer' | 'provider' | 'admin'
   final String? role;
+
+  /// Whether the current user has a provider role.
+  bool get isProviderRole => role == 'provider' || role == 'Provider';
 }
 
 /// Extended profile (Get Started) data from local storage.
@@ -150,10 +153,39 @@ class ProfileExtended {
       address.trim().isNotEmpty;
 }
 
-/// Set of favorited service IDs (persisted locally).
-final favoritesIdsProvider = FutureProvider<Set<String>>((ref) => getFavoriteServiceIds());
+/// Favorite services for the current user (backend source of truth, with optional local migration).
+final favoriteServicesProvider = FutureProvider.autoDispose<List<ServiceModel>>((ref) async {
+  final repo = ref.watch(apiRepositoryProvider);
 
-/// Name of the current favorite list, if set.
+  // One-time migration: if backend has no favorites yet but local storage does, push them.
+  final hasMigrated = await hasMigratedFavoritesToBackend();
+  if (!hasMigrated) {
+    try {
+      final remote = await repo.getFavoriteServices();
+      if (remote.isEmpty) {
+        final localIds = await getFavoriteServiceIds();
+        if (localIds.isNotEmpty) {
+          for (final id in localIds) {
+            await repo.addFavoriteService(id);
+          }
+        }
+      }
+      await markFavoritesMigratedToBackend();
+    } catch (_) {
+      // If migration fails, we still fall back to backend favorites as-is.
+    }
+  }
+
+  return repo.getFavoriteServices();
+});
+
+/// Set of favorited service IDs derived from backend favorites.
+final favoritesIdsProvider = FutureProvider<Set<String>>((ref) async {
+  final services = await ref.watch(favoriteServicesProvider.future);
+  return services.map((s) => s.id).toSet();
+});
+
+/// Name of the current favorite list, if set (still stored locally).
 final favoriteListNameProvider = FutureProvider<String?>((ref) => getFavoriteListName());
 
 /// Whether a service is in favorites.
@@ -182,3 +214,5 @@ final hostProfileProvider = FutureProvider.family<HostProfile?, String>((ref, pr
     return null;
   }
 });
+
+// (favoriteServicesProvider is defined above with backend sync.)

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/favorites_storage.dart';
 import '../../../core/api/recently_viewed_storage.dart';
 import '../../../core/models/host_profile_model.dart';
 import '../../../core/models/service_model.dart';
@@ -149,8 +148,10 @@ class _ServiceDetailContent extends ConsumerWidget {
                   ),
                 ),
                 onPressed: () async {
+                  final repo = ref.read(apiRepositoryProvider);
                   if (isFavorite) {
-                    await removeFavorite(service.id);
+                    await repo.removeFavoriteService(service.id);
+                    ref.invalidate(favoriteServicesProvider);
                     ref.invalidate(favoritesIdsProvider);
                   } else {
                     await addServiceToFavorites(context, ref, service.id);

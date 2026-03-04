@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../core/api/favorites_storage.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -57,8 +55,9 @@ class _SuggestedCategoryTile extends StatelessWidget {
 }
 
 /// Legacy tile for non-category suggestions (e.g. Nearby).
-class _SuggestedDestinationTile extends StatelessWidget {
-  const _SuggestedDestinationTile({
+class SuggestedDestinationTile extends StatelessWidget {
+  const SuggestedDestinationTile({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -539,7 +538,7 @@ class _SuggestedCategoriesSection extends ConsumerWidget {
           )),
         ],
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
     );
   }
 }
@@ -637,8 +636,10 @@ class _SearchResultsSection extends ConsumerWidget {
                   onTap: () => context.push('/service/${service.id}'),
                   isFavorite: isFav,
                   onFavoriteTap: () async {
+                    final repo = ref.read(apiRepositoryProvider);
                     if (isFav) {
-                      await removeFavorite(service.id);
+                      await repo.removeFavoriteService(service.id);
+                      ref.invalidate(favoriteServicesProvider);
                       ref.invalidate(favoritesIdsProvider);
                     } else {
                       await addServiceToFavorites(context, ref, service.id);

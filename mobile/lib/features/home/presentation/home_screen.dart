@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/favorites_storage.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -84,7 +83,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            // Section: Near you (horizontal scroll)
+            // Section: Near you (grid layout)
             SliverToBoxAdapter(
               child: _SectionHeader(
                 title: 'Near you',
@@ -97,45 +96,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             servicesAsync.when(
-              data: (services) => SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 280,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    itemCount: services.length + 1,
-                    itemBuilder: (context, index) {
-                      final cardWidth = MediaQuery.of(context).size.width * 0.72;
-                      if (index == services.length) {
-                        return _SeeAllCard(
-                          onTap: () => context.push('/explore'),
-                          width: cardWidth,
-                        );
-                      }
-                      final service = services[index];
-                      final isFav = ref.watch(isFavoriteProvider(service.id));
-                      return Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.md),
-                        child: SizedBox(
-                          width: cardWidth,
-                          child: ServiceCard(
-                            service: service,
-                            onTap: () => context.push('/service/${service.id}'),
-                            isFavorite: isFav,
-                            onFavoriteTap: () async {
-                              if (isFav) {
-                                await removeFavorite(service.id);
-                                ref.invalidate(favoritesIdsProvider);
-                              } else {
-                                await addServiceToFavorites(context, ref, service.id);
-                              }
-                            },
-                          ),
+              data: (services) => SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                sliver: services.isEmpty
+                    ? const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.all(AppSpacing.xl),
+                          child: Center(child: Text('No services available')),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      )
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: AppSpacing.sm,
+                          mainAxisSpacing: AppSpacing.sm,
+                          childAspectRatio: 0.68,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final service = services[index];
+                            final isFav = ref.watch(isFavoriteProvider(service.id));
+                            return ServiceCard(
+                              service: service,
+                              dense: true,
+                              onTap: () => context.push('/service/${service.id}'),
+                              isFavorite: isFav,
+                              onFavoriteTap: () async {
+                                final repo = ref.read(apiRepositoryProvider);
+                                if (isFav) {
+                                  await repo.removeFavoriteService(service.id);
+                                  ref.invalidate(favoriteServicesProvider);
+                                  ref.invalidate(favoritesIdsProvider);
+                                } else {
+                                  await addServiceToFavorites(context, ref, service.id);
+                                }
+                              },
+                            );
+                          },
+                          childCount: services.length,
+                        ),
+                      ),
               ),
               loading: () => const SliverToBoxAdapter(
                 child: SizedBox(
@@ -143,27 +143,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                 ),
               ),
-              error: (err, stack) => SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 280,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final cardWidth = MediaQuery.of(context).size.width * 0.72;
-                      return ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        itemCount: 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return _SeeAllCard(
-                              onTap: () => context.push('/explore'),
-                              width: cardWidth,
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      );
-                    },
+              error: (err, stack) => const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.xl),
+                  child: Center(child: Text('Could not load services')),
+                ),
+              ),
+            ),
+            // "See all" button below the grid
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/explore'),
+                  icon: const Icon(Icons.explore_rounded),
+                  label: const Text('See all services'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    ),
                   ),
                 ),
               ),
@@ -220,63 +221,6 @@ class _SeeAllChip extends StatelessWidget {
   }
 }
 
-/// Tappable "See all" card at the end of the services row.
-class _SeeAllCard extends StatelessWidget {
-  const _SeeAllCard({required this.onTap, required this.width});
-
-  final VoidCallback onTap;
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.md),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          child: Container(
-            width: width,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.08),
-                  AppColors.primaryLight.withValues(alpha: 0.05),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.map_rounded, size: 48, color: AppColors.primary),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'See all',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Browse by area',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Section header with title and "See all" arrow (like Airbnb).
 class _SectionHeader extends StatelessWidget {

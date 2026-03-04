@@ -12,6 +12,8 @@ const PERMISSIONS = {
     'messages.create_thread',
     'messages.send',
     'services.read',
+    'favorites.read',
+    'favorites.write',
     'providers.read_public',
   ]),
   provider: new Set([
@@ -20,6 +22,8 @@ const PERMISSIONS = {
     'messages.send',
     'services.read',
     'services.manage_own',
+    'favorites.read',
+    'favorites.write',
     'providers.manage_self',
     'providers.read_public',
   ]),

@@ -184,6 +184,42 @@ class ApiRepository {
     }
   }
 
+  /// Fetch multiple services by their IDs.
+  Future<List<ServiceModel>> getServicesByIds(List<String> ids) async {
+    final results = <ServiceModel>[];
+    for (final id in ids) {
+      try {
+        final service = await getServiceById(id);
+        if (service != null) results.add(service);
+      } catch (_) {
+        // Skip services that fail to load
+      }
+    }
+    return results;
+  }
+
+  // —— Favorites ——
+
+  /// List favorite services for the current user.
+  Future<List<ServiceModel>> getFavoriteServices() async {
+    final res = await _dio.get<List<dynamic>>('/favorites');
+    final list = res.data ?? [];
+    return list.map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Mark a service as favorite for the current user.
+  Future<void> addFavoriteService(String serviceId) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/favorites',
+      data: {'serviceId': serviceId},
+    );
+  }
+
+  /// Remove a service from the current user's favorites.
+  Future<void> removeFavoriteService(String serviceId) async {
+    await _dio.delete<void>('/favorites/$serviceId');
+  }
+
   /// Provider-only: list my services (draft + active).
   Future<List<ServiceModel>> getMyServices() async {
     final res = await _dio.get<List<dynamic>>('/services/mine');
