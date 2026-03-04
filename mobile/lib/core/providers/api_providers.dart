@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/auth_storage.dart';
 import '../api/favorites_storage.dart';
+import '../api/recent_searches_storage.dart';
 import '../api/recently_viewed_storage.dart';
 import '../api/profile_storage.dart';
 import '../models/booking_model.dart';
@@ -52,6 +53,46 @@ final searchResultsProvider = FutureProvider.family<List<ServiceModel>, String?>
   try {
     final query = q?.trim();
     return await ref.read(apiRepositoryProvider).getServices(q: query?.isEmpty == true ? null : query);
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Combined search: query + category + sort. Used by SearchScreen.
+class SearchFilter {
+  const SearchFilter({
+    this.query,
+    this.categoryId,
+    this.sortBy = 'rating',
+    this.sortOrder = 'desc',
+  });
+  final String? query;
+  final String? categoryId;
+  final String sortBy;
+  final String sortOrder;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SearchFilter &&
+          query == other.query &&
+          categoryId == other.categoryId &&
+          sortBy == other.sortBy &&
+          sortOrder == other.sortOrder;
+
+  @override
+  int get hashCode => Object.hash(query, categoryId, sortBy, sortOrder);
+}
+
+final searchServicesProvider =
+    FutureProvider.family<List<ServiceModel>, SearchFilter>((ref, filter) async {
+  try {
+    return await ref.read(apiRepositoryProvider).getServices(
+          q: filter.query?.trim().isEmpty == true ? null : filter.query?.trim(),
+          categoryId: filter.categoryId,
+          sortBy: filter.sortBy,
+          sortOrder: filter.sortOrder,
+        );
   } catch (_) {
     return [];
   }
@@ -205,6 +246,9 @@ final recentlyViewedServicesProvider = FutureProvider<List<ServiceModel>>((ref) 
   final byId = {for (var s in all) s.id: s};
   return ids.map((id) => byId[id]).whereType<ServiceModel>().toList();
 });
+
+/// Recent search queries (most recent first), from local storage.
+final recentSearchesProvider = FutureProvider<List<String>>((ref) => getRecentSearches());
 
 /// Lightweight public host profile for a given provider id (used on service detail page).
 final hostProfileProvider = FutureProvider.family<HostProfile?, String>((ref, providerId) async {

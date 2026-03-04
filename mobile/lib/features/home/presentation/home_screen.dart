@@ -305,33 +305,41 @@ class _PremiumHeader extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onSearchTap,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
+                  vertical: 14,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: AppColors.divider,
+                    width: 1,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 12,
+                      blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 24),
+                    Icon(Icons.search_rounded, color: AppColors.textTertiary, size: 22),
                     const SizedBox(width: 12),
-                    Text(
-                      'What service do you need?',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textTertiary,
-                          ),
+                    Expanded(
+                      child: Text(
+                        'Search services or providers',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppColors.textTertiary,
+                              fontWeight: FontWeight.w400,
+                            ),
+                      ),
                     ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textTertiary),
                   ],
                 ),
               ),

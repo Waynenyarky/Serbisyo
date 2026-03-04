@@ -138,7 +138,9 @@ GoRouter createAppRouter({String initialLocation = '/login'}) {
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => _buildSearchTransitionPage(
           key: state.pageKey,
-          child: const SearchScreen(),
+          child: SearchScreen(
+            initialQuery: state.uri.queryParameters['q'],
+          ),
         ),
       ),
       GoRoute(
