@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const Service = require('../models/Service');
 const ProviderProfile = require('../models/ProviderProfile');
 const User = require('../models/User');
@@ -7,6 +8,29 @@ const { authMiddleware } = require('./auth');
 const { requirePermission } = require('../middleware/rbac');
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+
+function providerRole(user) {
+  if (user.is_admin) return 'admin';
+  if (user.is_provider) return 'provider';
+  return 'customer';
+}
+
+function issueToken(user) {
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      email: user.email,
+      roles: {
+        is_customer: !!user.is_customer,
+        is_provider: !!user.is_provider,
+        is_admin: !!user.is_admin,
+        admin_role: user.admin_role || null,
+      },
+    },
+    JWT_SECRET
+  );
+}
 
 function isValidObjectId(value) {
   return mongoose.Types.ObjectId.isValid(value);
@@ -27,6 +51,38 @@ function parseNumber(value, fallback) {
 function escapeRegex(input) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+// Authenticated fallback endpoint to upgrade current user to provider.
+// Kept under /providers to support older clients/servers during transition.
+router.post('/me/upgrade', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.is_customer = true;
+    if (!user.is_provider) {
+      user.is_provider = true;
+      await user.save();
+    }
+
+    const token = issueToken(user);
+    return res.json({
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        fullName: user.fullName,
+        role: providerRole(user),
+        is_customer: !!user.is_customer,
+        is_provider: !!user.is_provider,
+        is_admin: !!user.is_admin,
+        admin_role: user.admin_role || null,
+      },
+      token,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // Provider-only: activation status (has active service, verified, payout, isActive)
 router.get('/me/status', authMiddleware, requirePermission('providers.manage_self'), async (req, res) => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
+const path = require('path');
 const { connectDB } = require('./config/db');
 const { configurePassport } = require('./config/passport');
 
@@ -11,6 +12,8 @@ const bookingsRoutes = require('./routes/bookings');
 const messagesRoutes = require('./routes/messages');
 const providersRoutes = require('./routes/providers');
 const favoritesRoutes = require('./routes/favorites');
+const paymentsRoutes = require('./routes/payments');
+const reviewsRoutes = require('./routes/reviews');
 
 const app = express();
 const BASE_PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -21,6 +24,7 @@ configurePassport(passport);
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const routes = [
   { path: '/api/auth', name: 'Auth (login, register, me)' },
@@ -30,6 +34,8 @@ const routes = [
   { path: '/api/messages', name: 'Messages' },
   { path: '/api/favorites', name: 'Favorites' },
   { path: '/api/providers', name: 'Providers (me/status, me profile)' },
+  { path: '/api/payments', name: 'Payments' },
+  { path: '/api/reviews', name: 'Reviews' },
 ];
 
 app.use('/api/auth', authRoutes);
@@ -39,6 +45,8 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/providers', providersRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/reviews', reviewsRoutes);
 
 // Health: returns real DB status and server info
 app.get('/api/health', (req, res) => {

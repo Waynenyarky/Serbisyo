@@ -13,6 +13,7 @@ import '../../../core/ui/responsive.dart';
 import '../../../shared/widgets/create_favorite_sheet.dart';
 import '../../../shared/widgets/premium_service_image.dart';
 import '../../../shared/widgets/service_card.dart';
+import '../../../shared/widgets/star_rating.dart';
 
 /// Sort option for search results.
 enum _SortOption {
@@ -66,11 +67,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   SearchFilter get _filter => SearchFilter(
-        query: _queryController.text.trim().isEmpty ? null : _queryController.text.trim(),
-        categoryId: _selectedCategoryId,
-        sortBy: _sort.sortBy,
-        sortOrder: _sort.sortOrder,
-      );
+    query: _queryController.text.trim().isEmpty
+        ? null
+        : _queryController.text.trim(),
+    categoryId: _selectedCategoryId,
+    sortBy: _sort.sortBy,
+    sortOrder: _sort.sortOrder,
+  );
 
   void _onQueryChanged(String value) {
     _debounce?.cancel();
@@ -98,8 +101,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final pad = Responsive.pageHorizontalPadding(context);
     final cols = Responsive.marketplaceGridColumns(context);
-    final hasQueryOrCategory = _filter.query != null || _filter.categoryId != null;
-    final showRecentSearches = !hasQueryOrCategory && _queryController.text.trim().isEmpty;
+    final hasQueryOrCategory =
+        _filter.query != null || _filter.categoryId != null;
+    final showRecentSearches =
+        !hasQueryOrCategory && _queryController.text.trim().isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -129,61 +134,68 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       leading: IconButton(
         icon: const Icon(Icons.close_rounded),
         onPressed: () => context.pop(),
-        style: IconButton.styleFrom(
-          foregroundColor: AppColors.textPrimary,
-        ),
+        style: IconButton.styleFrom(foregroundColor: AppColors.textPrimary),
       ),
       titleSpacing: 0,
       title: Padding(
         padding: EdgeInsets.only(right: pad),
         child: TextField(
-            controller: _queryController,
-            focusNode: _searchFocusNode,
-            onChanged: _onQueryChanged,
-            onSubmitted: (q) {
-              if (q.trim().isNotEmpty) {
-                addRecentSearch(q.trim()).then((_) => ref.invalidate(recentSearchesProvider));
-              }
-              setState(() {});
-            },
-            textInputAction: TextInputAction.search,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-            decoration: InputDecoration(
-              hintText: 'Search services or providers',
-              hintStyle: TextStyle(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w400,
-              ),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                color: AppColors.textTertiary,
-                size: 22,
-              ),
-              suffixIcon: hasText
-                  ? IconButton(
-                      icon: Icon(Icons.clear_rounded, size: 20, color: AppColors.textSecondary),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              filled: true,
-              fillColor: AppColors.background,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.divider, width: 1),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
-              ),
+          controller: _queryController,
+          focusNode: _searchFocusNode,
+          onChanged: _onQueryChanged,
+          onSubmitted: (q) {
+            if (q.trim().isNotEmpty) {
+              addRecentSearch(
+                q.trim(),
+              ).then((_) => ref.invalidate(recentSearchesProvider));
+            }
+            setState(() {});
+          },
+          textInputAction: TextInputAction.search,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Search services or providers',
+            hintStyle: TextStyle(
+              color: AppColors.textTertiary,
+              fontWeight: FontWeight.w400,
             ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              color: AppColors.textTertiary,
+              size: 22,
+            ),
+            suffixIcon: hasText
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear_rounded,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: _clearSearch,
+                  )
+                : null,
+            filled: true,
+            fillColor: AppColors.background,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: AppColors.divider, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
         ),
       ),
     );
@@ -226,7 +238,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildSortRow(double pad) {
-    final hasQueryOrCategory = _filter.query != null || _filter.categoryId != null;
+    final hasQueryOrCategory =
+        _filter.query != null || _filter.categoryId != null;
     return Padding(
       padding: EdgeInsets.fromLTRB(pad, 0, pad, AppSpacing.sm),
       child: Row(
@@ -261,7 +274,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => setState(() {
-          _viewMode = _viewMode == _ViewMode.grid ? _ViewMode.list : _ViewMode.grid;
+          _viewMode = _viewMode == _ViewMode.grid
+              ? _ViewMode.list
+              : _ViewMode.grid;
         }),
         borderRadius: BorderRadius.circular(10),
         child: Container(
@@ -275,7 +290,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                _viewMode == _ViewMode.grid ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                _viewMode == _ViewMode.grid
+                    ? Icons.grid_view_rounded
+                    : Icons.view_list_rounded,
                 size: 20,
                 color: AppColors.textSecondary,
               ),
@@ -283,9 +300,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Text(
                 _viewMode == _ViewMode.grid ? 'Grid' : 'List',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -322,7 +339,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         children: [
                           Text(
                             'Recent searches',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textSecondary,
                                 ),
@@ -348,34 +366,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: recent.map((q) {
+                          final maxChipWidth =
+                              MediaQuery.sizeOf(context).width - (pad * 2) - 16;
                           return GestureDetector(
                             onTap: () => _runSearch(q),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.divider),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.03),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: maxChipWidth,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.history_rounded, size: 18, color: AppColors.textTertiary),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    q,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                  ),
-                                ],
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.divider),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.03,
+                                      ),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.history_rounded,
+                                      size: 18,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        q,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -391,17 +432,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Text(
                 'Browse by category',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 12),
               categoriesAsync.when(
                 data: (categories) => Column(
-                  children: categories.map((c) => _CategoryTile(
-                    name: c.name,
-                    onTap: () => setState(() => _selectedCategoryId = c.id),
-                  )).toList(),
+                  children: categories
+                      .map(
+                        (c) => _CategoryTile(
+                          name: c.name,
+                          onTap: () =>
+                              setState(() => _selectedCategoryId = c.id),
+                        ),
+                      )
+                      .toList(),
                 ),
                 loading: () => const Center(
                   child: Padding(
@@ -409,7 +455,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     child: SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -431,27 +480,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final servicesAsync = ref.watch(searchServicesProvider(_filter));
     return servicesAsync.when(
       data: (services) => _buildResultsContent(context, pad, services),
-      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
       error: (err, stackTrace) => _buildErrorState(),
     );
   }
 
-  Widget _buildResultsContent(BuildContext context, double pad, List<ServiceModel> services) {
+  Widget _buildResultsContent(
+    BuildContext context,
+    double pad,
+    List<ServiceModel> services,
+  ) {
     if (services.isEmpty) return _buildEmptyState();
 
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(pad, AppSpacing.md, pad, AppSpacing.sm),
+            padding: EdgeInsets.fromLTRB(
+              pad,
+              AppSpacing.md,
+              pad,
+              AppSpacing.sm,
+            ),
             child: Row(
               children: [
                 Text(
                   '${services.length} result${services.length == 1 ? '' : 's'}',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -467,42 +527,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 mainAxisSpacing: AppSpacing.sm,
                 childAspectRatio: 0.68,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final service = services[index];
-                  final isFav = ref.watch(isFavoriteProvider(service.id));
-                  return ServiceCard(
-                    service: service,
-                    dense: true,
-                    onTap: () => context.push('/service/${service.id}'),
-                    isFavorite: isFav,
-                    onFavoriteTap: () => _toggleFavorite(context, service.id, isFav),
-                  );
-                },
-                childCount: services.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final service = services[index];
+                final isFav = ref.watch(isFavoriteProvider(service.id));
+                return ServiceCard(
+                  service: service,
+                  dense: true,
+                  onTap: () => context.push('/service/${service.id}'),
+                  isFavorite: isFav,
+                  onFavoriteTap: () =>
+                      _toggleFavorite(context, service.id, isFav),
+                );
+              }, childCount: services.length),
             ),
           )
         else
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: pad),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final service = services[index];
-                  final isFav = ref.watch(isFavoriteProvider(service.id));
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ServiceListTile(
-                      service: service,
-                      isFavorite: isFav,
-                      onTap: () => context.push('/service/${service.id}'),
-                      onFavoriteTap: () => _toggleFavorite(context, service.id, isFav),
-                    ),
-                  );
-                },
-                childCount: services.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final service = services[index];
+                final isFav = ref.watch(isFavoriteProvider(service.id));
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _ServiceListTile(
+                    service: service,
+                    isFavorite: isFav,
+                    onTap: () => context.push('/service/${service.id}'),
+                    onFavoriteTap: () =>
+                        _toggleFavorite(context, service.id, isFav),
+                  ),
+                );
+              }, childCount: services.length),
             ),
           ),
         const SliverToBoxAdapter(child: SizedBox(height: 32)),
@@ -530,22 +586,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                 ],
               ),
-              child: Icon(Icons.search_off_rounded, size: 48, color: AppColors.textTertiary),
+              child: Icon(
+                Icons.search_off_rounded,
+                size: 48,
+                color: AppColors.textTertiary,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
               'No results found',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try a different search or category',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textTertiary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -565,7 +625,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             const SizedBox(height: 16),
             Text(
               'Could not load results',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.error),
               textAlign: TextAlign.center,
             ),
           ],
@@ -574,7 +636,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Future<void> _toggleFavorite(BuildContext context, String serviceId, bool isFav) async {
+  Future<void> _toggleFavorite(
+    BuildContext context,
+    String serviceId,
+    bool isFav,
+  ) async {
     final repo = ref.read(apiRepositoryProvider);
     if (isFav) {
       await repo.removeFavoriteService(serviceId);
@@ -638,9 +704,9 @@ class _ModernChip extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
-                ),
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : AppColors.textPrimary,
+            ),
           ),
         ),
       ),
@@ -672,18 +738,26 @@ class _CategoryTile extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.category_rounded, color: AppColors.primary, size: 22),
+                child: Icon(
+                  Icons.category_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   name,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.textTertiary),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 12,
+                color: AppColors.textTertiary,
+              ),
             ],
           ),
         ),
@@ -749,21 +823,24 @@ class _ServiceListTile extends StatelessWidget {
                     Text(
                       service.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.star_rounded, size: 16, color: AppColors.warning),
+                        StarRating(
+                          rating: service.rating,
+                          size: 14,
+                          spacing: 0,
+                        ),
                         const SizedBox(width: 4),
                         Text(
-                          '${service.rating} (${service.reviewCount})',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                          '${service.rating.toStringAsFixed(1)} (${service.reviewCount})',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -771,9 +848,9 @@ class _ServiceListTile extends StatelessWidget {
                     Text(
                       '₱${service.pricePerHour.toStringAsFixed(0)}/hr',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
@@ -783,8 +860,12 @@ class _ServiceListTile extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: Icon(
-                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFavorite ? AppColors.error : AppColors.textTertiary,
+                    isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: isFavorite
+                        ? AppColors.error
+                        : AppColors.textTertiary,
                     size: 22,
                   ),
                 ),

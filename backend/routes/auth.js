@@ -125,6 +125,25 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// Upgrade current authenticated user to provider (idempotent).
+router.post('/become-provider', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.is_customer = true;
+    if (!user.is_provider) {
+      user.is_provider = true;
+      await user.save();
+    }
+
+    const token = issueToken(user);
+    return res.json(authResponse(user, token));
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/oauth/google', (req, res, next) => {
   const requestedRole = (req.query.role || 'customer').toString().toLowerCase();
   if (!VALID_SIGNUP_ROLES.includes(requestedRole)) {

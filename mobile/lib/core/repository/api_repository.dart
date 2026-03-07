@@ -7,6 +7,8 @@ import '../models/message_thread_model.dart';
 import '../models/service_category.dart';
 import '../models/service_model.dart';
 import '../models/host_profile_model.dart';
+import '../models/payment_model.dart';
+import '../models/review_model.dart';
 
 class ApiRepository {
   ApiRepository(this._dio);
@@ -22,10 +24,20 @@ class ApiRepository {
     return _parseAuthResponse(res.data!);
   }
 
-  Future<AuthResponse> register(String email, String password, String fullName, {String role = 'customer'}) async {
+  Future<AuthResponse> register(
+    String email,
+    String password,
+    String fullName, {
+    String role = 'customer',
+  }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/auth/register',
-      data: {'email': email, 'password': password, 'fullName': fullName, 'role': role},
+      data: {
+        'email': email,
+        'password': password,
+        'fullName': fullName,
+        'role': role,
+      },
     );
     return _parseAuthResponse(res.data!, fallbackRole: role);
   }
@@ -46,20 +58,52 @@ class ApiRepository {
     return _parseAuthResponse(res.data!);
   }
 
+  /// Upgrade current authenticated account to provider role (idempotent).
+  Future<AuthResponse> becomeProvider() async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/become-provider',
+      );
+      return _parseAuthResponse(res.data!);
+    } on DioException catch (e) {
+      // Backward compatibility: some running servers may not expose /auth/become-provider yet.
+      if (e.response?.statusCode == 404) {
+        final fallback = await _dio.post<Map<String, dynamic>>(
+          '/providers/me/upgrade',
+        );
+        return _parseAuthResponse(fallback.data!);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     await clearAuth();
     AuthGuard.setAuthState(authenticated: false);
   }
 
-  Future<AuthResponse> _parseAuthResponse(Map<String, dynamic> data, {String? fallbackRole}) async {
-    final userMap = data['user'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+  Future<AuthResponse> _parseAuthResponse(
+    Map<String, dynamic> data, {
+    String? fallbackRole,
+  }) async {
+    final userMap =
+        data['user'] as Map<String, dynamic>? ?? const <String, dynamic>{};
     final userId = (userMap['id'] ?? userMap['_id'] ?? '').toString();
     final email = (userMap['email'] ?? '').toString();
-    final fullName = ((userMap['fullName'] ?? userMap['name']) ?? email).toString();
-    final isCustomer = _asBool(userMap['is_customer']) ?? _asBool(userMap['isCustomer']) ?? true;
-    final isProvider = _asBool(userMap['is_provider']) ?? _asBool(userMap['isProvider']) ?? false;
-    final isAdmin = _asBool(userMap['is_admin']) ?? _asBool(userMap['isAdmin']) ?? false;
-    final adminRole = (userMap['admin_role'] ?? userMap['adminRole'])?.toString();
+    final fullName = ((userMap['fullName'] ?? userMap['name']) ?? email)
+        .toString();
+    final isCustomer =
+        _asBool(userMap['is_customer']) ??
+        _asBool(userMap['isCustomer']) ??
+        true;
+    final isProvider =
+        _asBool(userMap['is_provider']) ??
+        _asBool(userMap['isProvider']) ??
+        false;
+    final isAdmin =
+        _asBool(userMap['is_admin']) ?? _asBool(userMap['isAdmin']) ?? false;
+    final adminRole = (userMap['admin_role'] ?? userMap['adminRole'])
+        ?.toString();
 
     String? role = userMap['role']?.toString();
     role ??= fallbackRole;
@@ -118,7 +162,9 @@ class ApiRepository {
       return ServiceCategory(
         id: m['id'] as String,
         name: m['name'] as String,
-        assetImagePath: m['assetImagePath'] as String? ?? 'assets/images/placeholders/placeholder.png',
+        assetImagePath:
+            m['assetImagePath'] as String? ??
+            'assets/images/placeholders/placeholder.png',
       );
     }).toList();
   }
@@ -138,10 +184,17 @@ class ApiRepository {
     if (page != null && page > 0) query['page'] = page;
     if (limit != null && limit > 0) query['limit'] = limit;
     if (sortBy != null && sortBy.isNotEmpty) query['sortBy'] = sortBy;
-    if (sortOrder != null && sortOrder.isNotEmpty) query['sortOrder'] = sortOrder;
-    final res = await _dio.get<List<dynamic>>('/services', queryParameters: query);
+    if (sortOrder != null && sortOrder.isNotEmpty) {
+      query['sortOrder'] = sortOrder;
+    }
+    final res = await _dio.get<List<dynamic>>(
+      '/services',
+      queryParameters: query,
+    );
     final list = res.data ?? [];
-    return list.map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<NearestProvidersResult> getNearestProviders({
@@ -158,7 +211,8 @@ class ApiRepository {
         'lng': lng,
         'radiusMeters': radiusMeters,
         'limit': limit,
-        if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
+        if (categoryId != null && categoryId.isNotEmpty)
+          'categoryId': categoryId,
       },
     );
 
@@ -166,7 +220,9 @@ class ApiRepository {
     final matched = d['matched'] as bool? ?? false;
     final fallbackReason = d['fallbackReason']?.toString();
     final list = (d['candidates'] as List<dynamic>? ?? const <dynamic>[])
-        .map((e) => NearestProviderCandidate.fromJson(e as Map<String, dynamic>))
+        .map(
+          (e) => NearestProviderCandidate.fromJson(e as Map<String, dynamic>),
+        )
         .toList();
     return NearestProvidersResult(
       matched: matched,
@@ -204,7 +260,9 @@ class ApiRepository {
   Future<List<ServiceModel>> getFavoriteServices() async {
     final res = await _dio.get<List<dynamic>>('/favorites');
     final list = res.data ?? [];
-    return list.map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Mark a service as favorite for the current user.
@@ -224,7 +282,9 @@ class ApiRepository {
   Future<List<ServiceModel>> getMyServices() async {
     final res = await _dio.get<List<dynamic>>('/services/mine');
     final list = res.data ?? [];
-    return list.map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map<ServiceModel>((e) => _serviceFromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Provider-only: create draft service.
@@ -234,14 +294,30 @@ class ApiRepository {
     double pricePerHour = 0,
     String? description,
     String? imageUrl,
+    String? offers,
+    String? locationDescription,
+    String? availability,
+    String? thingsToKnow,
   }) async {
     final data = <String, dynamic>{
       'title': title,
       'categoryId': categoryId,
       'pricePerHour': pricePerHour,
     };
-    if (description != null && description.isNotEmpty) data['description'] = description;
+    if (description != null && description.isNotEmpty) {
+      data['description'] = description;
+    }
     if (imageUrl != null && imageUrl.isNotEmpty) data['imageUrl'] = imageUrl;
+    if (offers != null && offers.isNotEmpty) data['offers'] = offers;
+    if (locationDescription != null && locationDescription.isNotEmpty) {
+      data['locationDescription'] = locationDescription;
+    }
+    if (availability != null && availability.isNotEmpty) {
+      data['availability'] = availability;
+    }
+    if (thingsToKnow != null && thingsToKnow.isNotEmpty) {
+      data['thingsToKnow'] = thingsToKnow;
+    }
     final res = await _dio.post<Map<String, dynamic>>('/services', data: data);
     return _serviceFromJson(res.data!);
   }
@@ -254,6 +330,10 @@ class ApiRepository {
     double? pricePerHour,
     String? description,
     String? imageUrl,
+    String? offers,
+    String? locationDescription,
+    String? availability,
+    String? thingsToKnow,
     String? status,
   }) async {
     final data = <String, dynamic>{};
@@ -262,9 +342,38 @@ class ApiRepository {
     if (pricePerHour != null) data['pricePerHour'] = pricePerHour;
     if (description != null) data['description'] = description;
     if (imageUrl != null) data['imageUrl'] = imageUrl;
+    if (offers != null) data['offers'] = offers;
+    if (locationDescription != null) {
+      data['locationDescription'] = locationDescription;
+    }
+    if (availability != null) data['availability'] = availability;
+    if (thingsToKnow != null) data['thingsToKnow'] = thingsToKnow;
     if (status != null) data['status'] = status;
-    final res = await _dio.patch<Map<String, dynamic>>('/services/$id', data: data);
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/services/$id',
+      data: data,
+    );
     return _serviceFromJson(res.data!);
+  }
+
+  /// Provider-only: upload service photo file and attach to service.
+  Future<ServiceModel> uploadServicePhoto({
+    required String id,
+    required String filePath,
+  }) async {
+    final form = FormData.fromMap({
+      'image': await MultipartFile.fromFile(filePath),
+    });
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/services/$id/photo',
+      data: form,
+    );
+    return _serviceFromJson(res.data!);
+  }
+
+  /// Provider-only: delete service (owner only).
+  Future<void> deleteService(String id) async {
+    await _dio.delete<void>('/services/$id');
   }
 
   /// Provider-only: activation status.
@@ -282,7 +391,9 @@ class ApiRepository {
   /// Public: lightweight host profile for service detail page.
   Future<HostProfile?> getHostPublicProfile(String providerId) async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('/providers/$providerId/public');
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/providers/$providerId/public',
+      );
       final m = res.data!;
       return HostProfile(
         id: m['id'] as String,
@@ -298,6 +409,7 @@ class ApiRepository {
   }
 
   static ServiceModel _serviceFromJson(Map<String, dynamic> m) {
+    final createdAtRaw = m['createdAt']?.toString();
     return ServiceModel(
       id: (m['id'] ?? m['_id'] ?? '').toString(),
       title: (m['title'] ?? '').toString(),
@@ -306,7 +418,8 @@ class ApiRepository {
       rating: (m['rating'] as num?)?.toDouble() ?? 0,
       reviewCount: (m['reviewCount'] as num?)?.toInt() ?? 0,
       pricePerHour: (m['pricePerHour'] as num?)?.toDouble() ?? 0,
-      providerName: (m['providerName'] ?? m['provider']?['fullName'] ?? '').toString(),
+      providerName: (m['providerName'] ?? m['provider']?['fullName'] ?? '')
+          .toString(),
       description: m['description'] as String?,
       providerId: m['providerId']?.toString(),
       status: m['status'] as String?,
@@ -314,19 +427,44 @@ class ApiRepository {
       locationDescription: m['locationDescription'] as String?,
       availability: m['availability'] as String?,
       thingsToKnow: m['thingsToKnow'] as String?,
+      createdAt: createdAtRaw == null || createdAtRaw.isEmpty
+          ? null
+          : DateTime.tryParse(createdAtRaw),
     );
   }
 
   // —— Bookings ——
-  Future<List<BookingModel>> getBookings() async {
-    final res = await _dio.get<List<dynamic>>('/bookings');
+  Future<List<BookingModel>> getBookings({
+    String? status,
+    String? sort,
+    DateTime? from,
+    DateTime? to,
+    String? asRole,
+  }) async {
+    final query = <String, dynamic>{};
+    if (status != null && status.isNotEmpty) query['status'] = status;
+    if (sort != null && sort.isNotEmpty) query['sort'] = sort;
+    if (from != null) query['from'] = from.toUtc().toIso8601String();
+    if (to != null) query['to'] = to.toUtc().toIso8601String();
+    if (asRole != null && asRole.isNotEmpty) query['as'] = asRole;
+    final res = await _dio.get<List<dynamic>>(
+      '/bookings',
+      queryParameters: query,
+    );
     final list = res.data ?? [];
-    return list.map<BookingModel>((e) => _bookingFromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map<BookingModel>((e) => _bookingFromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<BookingModel?> getBookingById(String id) async {
+  Future<BookingModel?> getBookingById(String id, {String? asRole}) async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('/bookings/$id');
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/bookings/$id',
+        queryParameters: {
+          if (asRole != null && asRole.isNotEmpty) 'as': asRole,
+        },
+      );
       return _bookingFromJson(res.data!);
     } catch (_) {
       return null;
@@ -353,40 +491,259 @@ class ApiRepository {
       'address': address,
       'totalAmount': totalAmount,
     };
-    if (providerId != null && providerId.isNotEmpty) data['providerId'] = providerId;
+    if (providerId != null && providerId.isNotEmpty) {
+      data['providerId'] = providerId;
+    }
     if (imageUrl != null && imageUrl.isNotEmpty) data['imageUrl'] = imageUrl;
     final res = await _dio.post<Map<String, dynamic>>('/bookings', data: data);
     return _bookingFromJson(res.data!);
   }
 
-  static BookingModel _bookingFromJson(Map<String, dynamic> m) {
-    return BookingModel(
-      id: m['id'] as String,
-      serviceId: m['serviceId']?.toString() ?? '',
-      serviceTitle: m['serviceTitle'] as String,
-      providerName: m['providerName'] as String,
-      scheduledDate: m['scheduledDate'] as String,
-      scheduledTime: m['scheduledTime'] as String,
-      address: m['address'] as String,
-      status: m['status'] as String,
-      totalAmount: (m['totalAmount'] as num).toDouble(),
-      imageUrl: m['imageUrl'] as String?,
+  Future<BookingModel> acceptBooking(String bookingId, {String? reason}) async {
+    return _updateBookingStatusWithFallback(
+      bookingId: bookingId,
+      nextStatus: 'confirmed',
+      actionPath: 'accept',
+      reason: reason,
     );
   }
 
+  Future<BookingModel> declineBooking(
+    String bookingId, {
+    String? reason,
+  }) async {
+    return _updateBookingStatusWithFallback(
+      bookingId: bookingId,
+      nextStatus: 'declined',
+      actionPath: 'decline',
+      reason: reason,
+    );
+  }
+
+  Future<BookingModel> cancelBooking(String bookingId, {String? reason}) async {
+    return _updateBookingStatusWithFallback(
+      bookingId: bookingId,
+      nextStatus: 'cancelled',
+      actionPath: 'cancel',
+      reason: reason,
+    );
+  }
+
+  Future<BookingModel> startBooking(String bookingId, {String? reason}) async {
+    return _updateBookingStatusWithFallback(
+      bookingId: bookingId,
+      nextStatus: 'ongoing',
+      actionPath: 'start',
+      reason: reason,
+    );
+  }
+
+  Future<BookingModel> completeBooking(
+    String bookingId, {
+    String? reason,
+  }) async {
+    return _updateBookingStatusWithFallback(
+      bookingId: bookingId,
+      nextStatus: 'completed',
+      actionPath: 'complete',
+      reason: reason,
+    );
+  }
+
+  Future<BookingModel> _updateBookingStatusWithFallback({
+    required String bookingId,
+    required String nextStatus,
+    required String actionPath,
+    String? reason,
+  }) async {
+    final payload = <String, dynamic>{
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+    };
+
+    try {
+      // Newer API shape: PATCH /bookings/:id/:action
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/bookings/$bookingId/$actionPath',
+        data: payload,
+      );
+      return _bookingFromJson(res.data!);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+    }
+
+    try {
+      // Legacy fallback: PATCH /bookings/:id { status }
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/bookings/$bookingId',
+        data: <String, dynamic>{'status': nextStatus, ...payload},
+      );
+      return _bookingFromJson(res.data!);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 404) rethrow;
+    }
+
+    // Last fallback: some servers expose POST action routes.
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/bookings/$bookingId/$actionPath',
+      data: payload,
+    );
+    return _bookingFromJson(res.data!);
+  }
+
+  Future<PaymentModel> createPaymentIntent({
+    required String bookingId,
+    String method = 'card',
+    String? last4,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/payments/bookings/$bookingId/intent',
+      data: {
+        'method': method,
+        if (last4 != null && last4.trim().isNotEmpty) 'last4': last4.trim(),
+      },
+    );
+    return PaymentModel.fromJson(res.data!);
+  }
+
+  Future<PaymentModel> refundPayment({
+    required String bookingId,
+    required double amount,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/payments/bookings/$bookingId/refund',
+      data: {'amount': amount},
+    );
+    return PaymentModel.fromJson(res.data!);
+  }
+
+  Future<List<ReviewModel>> getReviews({
+    String? bookingId,
+    String? revieweeId,
+    String? serviceId,
+    String? roleType,
+    String? asRole,
+  }) async {
+    final res = await _dio.get<List<dynamic>>(
+      '/reviews',
+      queryParameters: {
+        if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
+        if (revieweeId != null && revieweeId.isNotEmpty)
+          'revieweeId': revieweeId,
+        if (serviceId != null && serviceId.isNotEmpty) 'serviceId': serviceId,
+        if (roleType != null && roleType.isNotEmpty) 'roleType': roleType,
+        if (asRole != null && asRole.isNotEmpty) 'as': asRole,
+      },
+    );
+    final list = res.data ?? [];
+    return list
+        .map((e) => ReviewModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ReviewModel> createReview({
+    required String bookingId,
+    required double ratingOverall,
+    Map<String, num>? ratings,
+    String? comment,
+    String? asRole,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/reviews',
+      data: {
+        'bookingId': bookingId,
+        'ratingOverall': ratingOverall,
+        'ratings': ratings ?? const <String, num>{},
+        if (comment != null && comment.trim().isNotEmpty)
+          'comment': comment.trim(),
+        if (asRole != null && asRole.isNotEmpty) 'as': asRole,
+      },
+    );
+    return ReviewModel.fromJson(res.data!);
+  }
+
+  static BookingModel _bookingFromJson(Map<String, dynamic> m) {
+    DateTime? scheduledAt;
+    final scheduledAtRaw = m['scheduledAt']?.toString();
+    final respondedAtRaw = m['respondedAt']?.toString();
+    final cancelledAtRaw = m['cancelledAt']?.toString();
+    final completedAtRaw = m['completedAt']?.toString();
+    final createdAtRaw = m['createdAt']?.toString();
+    final updatedAtRaw = m['updatedAt']?.toString();
+    if (scheduledAtRaw != null && scheduledAtRaw.isNotEmpty) {
+      scheduledAt = DateTime.tryParse(scheduledAtRaw);
+    }
+    final normalizedStatus = _normalizeBookingStatus(
+      (m['status'] ?? '').toString(),
+    );
+    return BookingModel(
+      id: (m['id'] ?? '').toString(),
+      serviceId: m['serviceId']?.toString() ?? '',
+      serviceTitle: (m['serviceTitle'] ?? '').toString(),
+      providerName: (m['providerName'] ?? '').toString(),
+      scheduledDate: (m['scheduledDate'] ?? '').toString(),
+      scheduledTime: (m['scheduledTime'] ?? '').toString(),
+      address: (m['address'] ?? '').toString(),
+      status: normalizedStatus,
+      totalAmount: (m['totalAmount'] as num?)?.toDouble() ?? 0,
+      scheduledAt: scheduledAt,
+      userId: m['userId']?.toString(),
+      providerId: m['providerId']?.toString(),
+      imageUrl: m['imageUrl'] as String?,
+      statusReason: m['statusReason']?.toString(),
+      respondedAt: respondedAtRaw != null && respondedAtRaw.isNotEmpty
+          ? DateTime.tryParse(respondedAtRaw)
+          : null,
+      cancelledAt: cancelledAtRaw != null && cancelledAtRaw.isNotEmpty
+          ? DateTime.tryParse(cancelledAtRaw)
+          : null,
+      completedAt: completedAtRaw != null && completedAtRaw.isNotEmpty
+          ? DateTime.tryParse(completedAtRaw)
+          : null,
+      statusUpdatedBy: m['statusUpdatedBy']?.toString(),
+      cancelledByRole: m['cancelledByRole']?.toString(),
+      cancellationPolicy: (m['cancellationPolicy'] ?? 'flexible').toString(),
+      refundAmount: (m['refundAmount'] as num?)?.toDouble() ?? 0,
+      paymentStatus: (m['paymentStatus'] ?? 'unpaid').toString(),
+      createdAt: createdAtRaw != null && createdAtRaw.isNotEmpty
+          ? DateTime.tryParse(createdAtRaw)
+          : null,
+      updatedAt: updatedAtRaw != null && updatedAtRaw.isNotEmpty
+          ? DateTime.tryParse(updatedAtRaw)
+          : null,
+    );
+  }
+
+  static String _normalizeBookingStatus(String raw) {
+    final status = raw.trim().toLowerCase();
+    if (status == 'past') return 'completed';
+    return status;
+  }
+
   // —— Messages ——
-  Future<List<MessageThreadModel>> getThreads() async {
-    final res = await _dio.get<List<dynamic>>('/messages/threads');
+  Future<List<MessageThreadModel>> getThreads({
+    String? q,
+    bool? unreadOnly,
+    String? type,
+  }) async {
+    final query = <String, dynamic>{};
+    if (q != null && q.trim().isNotEmpty) query['q'] = q.trim();
+    if (unreadOnly == true) query['unreadOnly'] = 'true';
+    if (type != null && type.isNotEmpty && type != 'all') query['type'] = type;
+    final res = await _dio.get<List<dynamic>>(
+      '/messages/threads',
+      queryParameters: query,
+    );
     final list = res.data ?? [];
     return list.map((e) {
       final m = e as Map<String, dynamic>;
       return MessageThreadModel(
-        id: m['id'] as String,
-        providerName: m['providerName'] as String,
-        serviceTitle: m['serviceTitle'] as String,
+        id: (m['id'] ?? '').toString(),
+        providerName: (m['providerName'] ?? '').toString(),
+        serviceTitle: (m['serviceTitle'] ?? '').toString(),
         lastMessage: m['lastMessage'] as String? ?? '',
         lastMessageAt: m['lastMessageAt'] as String? ?? '',
         unreadCount: (m['unreadCount'] as num?)?.toInt() ?? 0,
+        type: (m['type'] ?? 'direct').toString(),
       );
     }).toList();
   }
@@ -395,15 +752,17 @@ class ApiRepository {
     try {
       final res = await _dio.get<Map<String, dynamic>>('/messages/threads/$id');
       final d = res.data!;
-      final messages = (d['messages'] as List<dynamic>?)?.map((e) {
-        final m = e as Map<String, dynamic>;
-        return ThreadMessage(
-          id: m['id'] as String? ?? '',
-          text: m['text'] as String,
-          isMe: m['isMe'] as bool? ?? false,
-          time: m['time'] as String? ?? '',
-        );
-      }).toList() ?? [];
+      final messages =
+          (d['messages'] as List<dynamic>?)?.map((e) {
+            final m = e as Map<String, dynamic>;
+            return ThreadMessage(
+              id: m['id'] as String? ?? '',
+              text: m['text'] as String,
+              isMe: m['isMe'] as bool? ?? false,
+              time: m['time'] as String? ?? '',
+            );
+          }).toList() ??
+          [];
       return MessageThreadWithMessages(
         id: d['id'] as String,
         providerName: d['providerName'] as String,
@@ -438,13 +797,11 @@ class ApiRepository {
   }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/messages/threads/direct',
-      data: {
-        'serviceId': serviceId,
-        'providerId': providerId,
-      },
+      data: {'serviceId': serviceId, 'providerId': providerId},
     );
     final d = res.data!;
-    final messages = (d['messages'] as List<dynamic>?)?.map((e) {
+    final messages =
+        (d['messages'] as List<dynamic>?)?.map((e) {
           final m = e as Map<String, dynamic>;
           return ThreadMessage(
             id: m['id'] as String? ?? '',
@@ -483,6 +840,7 @@ class AuthUser {
   final String id;
   final String email;
   final String fullName;
+
   /// 'customer' | 'provider' | 'admin'
   final String? role;
   final bool isCustomer;
@@ -594,7 +952,12 @@ class MessageThreadWithMessages {
 }
 
 class ThreadMessage {
-  ThreadMessage({required this.id, required this.text, required this.isMe, required this.time});
+  ThreadMessage({
+    required this.id,
+    required this.text,
+    required this.isMe,
+    required this.time,
+  });
   final String id;
   final String text;
   final bool isMe;

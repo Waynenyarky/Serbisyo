@@ -1,13 +1,13 @@
 # Serbisyo Mobile Backlog
 
-Last updated: 2026-03-03
+Last updated: 2026-03-07
 
 ## Progress Snapshot
 - Stories: 12
-- Done: 6
-- Partial: 2
-- Not Started: 4
-- Progress: 50.3%
+- Done: 8
+- Partial: 1
+- Not Started: 3
+- Progress: 70.8%
 
 Tracking scale:
 - DONE = 1
@@ -25,6 +25,16 @@ Tracking scale:
 - **Messaging:** ✅ Chat screen implemented with thread support, message bubbles, and send functionality.
 - **Provider services:** ✅ My services screen with draft/active service list and add service navigation.
 - **Tests:** ⚠️ Current run covers existing widget test only. Add dedicated unit tests for `auth_storage`, `auth_guard`, and router redirect behavior next.
+
+## Recent Implemented Updates (2026-03-07)
+- ✅ **Premium full-screen auth redesign:** `login` and `signup` upgraded to full-screen premium layout with hero sections, refined forms, and polished CTA/error states.
+- ✅ **Host/Customer mode-aware Home:** dedicated host dashboard (`HostHomeScreen`) and mode-aware shell home routing in place.
+- ✅ **Booking lifecycle UX hardening:** customer and host flows now aligned with pending/confirmed/ongoing/completed/cancelled behavior, including host action controls.
+- ✅ **Ratings and reviews UX complete:** customer review flow, service-level review display, star visualization, and cross-screen refresh/invalidation wired.
+- ✅ **Service ratings consistency:** service detail overview and summary now read consistent computed review data; rating fallback handling improved across providers.
+- ✅ **Responsive sweep across major screens:** messages, bookings, search, favorites, host dashboards, and provider surfaces updated for smaller screens and text scaling.
+- ✅ **My Services display fixed:** card layout is now adaptive (compact stacked layout on small widths, horizontal on wider screens) with cleaner action alignment.
+- ✅ **Crash mitigation updates:** router shell page keys stabilized and booking review composer controller lifecycle fixed to prevent disposed-controller cascades.
 
 ## Mobile Backlog
 
@@ -70,7 +80,7 @@ Tracking scale:
     - Add unavailable fallback UI. ✅
 
 ### Epic MB-E03: Booking Flow UX
-**Progress:** 1 Done / 1 Partial / 0 Not Started (2 stories) → **75.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature MB-F05: Customer booking creation and tracking**
   - **Story MB-S05** `[x] DONE`
@@ -82,13 +92,13 @@ Tracking scale:
     - Add cancellation and reschedule UX. (deferred to provider actions)
 
 - **Feature MB-F06: Provider booking action center**
-  - **Story MB-S06** `[-] PARTIAL`
+  - **Story MB-S06** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S06
-  - Update: My services screen implemented for provider to view/edit services. Provider booking actions (accept/reject) UI still pending.
+  - Update: Provider bookings dashboard now supports host action flow (accept, decline, start service, complete service), status-badges, and refresh synchronization.
   - Tasks:
-    - Add provider booking action buttons and dialogs.
-    - Sync booking list with action outcomes.
-    - Show status-specific badges and alerts.
+    - Add provider booking action buttons and dialogs. ✅
+    - Sync booking list with action outcomes. ✅
+    - Show status-specific badges and alerts. ✅
 
 ### Epic MB-E04: Payments and Policy UX
 **Progress:** 0 Done / 0 Partial / 3 Not Started (3 stories) → **0.0%**
@@ -117,7 +127,7 @@ Tracking scale:
     - Display notice in chat and checkout entry points.
 
 ### Epic MB-E05: Messaging and Ratings UX
-**Progress:** 1 Done / 0 Partial / 1 Not Started (2 stories) → **50.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature MB-F10: Booking-linked message threads**
   - **Story MB-S10** `[x] DONE`
@@ -129,12 +139,13 @@ Tracking scale:
     - Improve unread/thread sorting behavior. ✅
 
 - **Feature MB-F11: Ratings and reviews UI**
-  - **Story MB-S11** `[ ] NOT_STARTED`
+  - **Story MB-S11** `[x] DONE`
   - Priority: P1 | SP: 5 | Effort: M | Depends on: M-S10
+  - Update: Post-completion review flow is live, ratings render as stars, service detail shows submitted reviews, and rating counts/averages refresh across Home/Search/Favorites.
   - Tasks:
-    - Add post-completion review sheet.
-    - Integrate create review API.
-    - Refresh provider profile score display.
+    - Add post-completion review sheet. ✅
+    - Integrate create review API. ✅
+    - Refresh provider profile score display. ✅
 
 ### Epic MB-E06: Demo Reliability UX
 **Progress:** 0 Done / 1 Partial / 0 Not Started (1 story) → **50.0%**
@@ -153,7 +164,7 @@ Tracking scale:
 - `MB-S03` `[x] DONE`
 - `MB-S04` `[x] DONE`
 - `MB-S05` `[x] DONE`
-- `MB-S06` `[-] PARTIAL`
+- `MB-S06` `[x] DONE`
 - `MB-S07` `[ ] NOT_STARTED`
 - `MB-S10` `[x] DONE`
 - `MB-S12` `[-] PARTIAL`

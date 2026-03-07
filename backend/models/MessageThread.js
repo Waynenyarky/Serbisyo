@@ -16,6 +16,11 @@ const threadSchema = new mongoose.Schema({
   messages: [messageSchema],
 }, { timestamps: true });
 
+// Common access and search indexes for thread list queries.
+threadSchema.index({ userId: 1, updatedAt: -1 });
+threadSchema.index({ providerId: 1, updatedAt: -1 });
+threadSchema.index({ providerName: 'text', serviceTitle: 'text', 'messages.text': 'text' });
+
 threadSchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {

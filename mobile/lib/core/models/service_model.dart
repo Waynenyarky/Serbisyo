@@ -16,6 +16,7 @@ class ServiceModel {
     this.locationDescription,
     this.availability,
     this.thingsToKnow,
+    this.createdAt,
   });
 
   final String id;
@@ -36,4 +37,6 @@ class ServiceModel {
   final String? locationDescription;
   final String? availability;
   final String? thingsToKnow;
+  /// Service creation timestamp from backend.
+  final DateTime? createdAt;
 }

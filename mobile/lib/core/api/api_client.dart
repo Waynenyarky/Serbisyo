@@ -72,6 +72,22 @@ Dio createApiClient({String? token}) {
             ),
           );
         }
+        if (error.type == DioExceptionType.badResponse) {
+          final data = error.response?.data;
+          if (data is Map<String, dynamic>) {
+            final serverMsg = data['error']?.toString().trim();
+            if (serverMsg != null && serverMsg.isNotEmpty) {
+              return handler.next(
+                DioException(
+                  requestOptions: error.requestOptions,
+                  response: error.response,
+                  error: serverMsg,
+                  type: DioExceptionType.badResponse,
+                ),
+              );
+            }
+          }
+        }
         return handler.next(error);
       },
     ),

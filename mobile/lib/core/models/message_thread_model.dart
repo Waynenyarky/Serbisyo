@@ -7,6 +7,7 @@ class MessageThreadModel {
     required this.lastMessage,
     required this.lastMessageAt,
     required this.unreadCount,
+    this.type = 'direct',
   });
 
   final String id;
@@ -15,4 +16,6 @@ class MessageThreadModel {
   final String lastMessage;
   final String lastMessageAt;
   final int unreadCount;
+  /// direct | support | booking
+  final String type;
 }

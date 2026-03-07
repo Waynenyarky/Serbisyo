@@ -2,20 +2,20 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/api/recently_viewed_storage.dart';
 import '../../../core/models/host_profile_model.dart';
+import '../../../core/models/review_model.dart';
 import '../../../core/models/service_model.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/widgets/create_favorite_sheet.dart';
+import '../../../shared/widgets/star_rating.dart';
 
 class ServiceDetailScreen extends ConsumerWidget {
-  const ServiceDetailScreen({
-    required this.serviceId,
-    super.key,
-  });
+  const ServiceDetailScreen({required this.serviceId, super.key});
 
   final String serviceId;
 
@@ -40,7 +40,9 @@ class ServiceDetailScreen extends ConsumerWidget {
       loading: () => Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(backgroundColor: AppColors.surface),
-        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       ),
       error: (e, _) => _buildErrorState(context, ref, e),
     );
@@ -55,11 +57,17 @@ class ServiceDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline_rounded, size: 48, color: AppColors.textTertiary),
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.textTertiary,
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'Could not load this service.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -67,7 +75,9 @@ class ServiceDetailScreen extends ConsumerWidget {
                 onPressed: () => ref.invalidate(serviceByIdProvider(serviceId)),
                 icon: const Icon(Icons.refresh_rounded, size: 20),
                 label: const Text('Retry'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
               ),
             ],
           ),
@@ -85,7 +95,8 @@ class _RecordRecentlyViewed extends ConsumerStatefulWidget {
   final Widget child;
 
   @override
-  ConsumerState<_RecordRecentlyViewed> createState() => _RecordRecentlyViewedState();
+  ConsumerState<_RecordRecentlyViewed> createState() =>
+      _RecordRecentlyViewedState();
 }
 
 class _RecordRecentlyViewedState extends ConsumerState<_RecordRecentlyViewed> {
@@ -108,7 +119,8 @@ class _ServiceDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasImage = service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
+    final hasImage =
+        service.imageUrl != null && service.imageUrl!.trim().isNotEmpty;
     final isFavorite = ref.watch(isFavoriteProvider(service.id));
     final hostAsync = service.providerId != null
         ? ref.watch(hostProfileProvider(service.providerId!))
@@ -116,6 +128,7 @@ class _ServiceDetailContent extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: _FloatingActionsBar(service: service),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -129,7 +142,11 @@ class _ServiceDetailContent extends ConsumerWidget {
                   color: Colors.black.withAlpha(51),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               onPressed: () => context.pop(),
             ),
@@ -142,7 +159,9 @@ class _ServiceDetailContent extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: isFavorite ? AppColors.error : Colors.white,
                     size: 24,
                   ),
@@ -195,7 +214,8 @@ class _ServiceDetailContent extends ConsumerWidget {
                 children: [
                   _OverviewSection(service: service),
                   const SizedBox(height: AppSpacing.md),
-                  if ((service.offers ?? service.description)?.isNotEmpty == true)
+                  if ((service.offers ?? service.description)?.isNotEmpty ==
+                      true)
                     _CardSection(
                       title: 'What this service offers',
                       child: Text(
@@ -217,10 +237,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                   hostAsync.when(
                     data: (host) => host == null
                         ? const SizedBox.shrink()
-                        : _MeetYourHostSection(
-                            host: host,
-                            service: service,
-                          ),
+                        : _MeetYourHostSection(host: host, service: service),
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                   ),
@@ -240,8 +257,7 @@ class _ServiceDetailContent extends ConsumerWidget {
                   ],
                   const SizedBox(height: AppSpacing.md),
                   _ReviewsSummarySection(service: service),
-                  const SizedBox(height: AppSpacing.lg),
-                  _ActionsSection(service: service),
+                  const SizedBox(height: 132),
                 ],
               ),
             ),
@@ -301,9 +317,9 @@ class _CardSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.sm),
           child,
@@ -313,13 +329,20 @@ class _CardSection extends StatelessWidget {
   }
 }
 
-class _OverviewSection extends StatelessWidget {
+class _OverviewSection extends ConsumerWidget {
   const _OverviewSection({required this.service});
 
   final ServiceModel service;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviews =
+        ref.watch(serviceReviewsProvider(service.id)).valueOrNull ?? const [];
+    final count = reviews.isNotEmpty ? reviews.length : service.reviewCount;
+    final avg = reviews.isNotEmpty
+        ? (reviews.fold<double>(0, (sum, r) => sum + r.ratingOverall) /
+              reviews.length)
+        : service.rating;
     return _CardSection(
       title: service.title,
       child: Column(
@@ -327,16 +350,16 @@ class _OverviewSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.star_rounded, size: 22, color: AppColors.warning),
+              StarRating(rating: avg, size: 20, spacing: 0),
               const SizedBox(width: 6),
               Text(
-                service.rating.toStringAsFixed(1),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                avg.toStringAsFixed(1),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
-                ' (${service.reviewCount} reviews)',
+                ' ($count reviews)',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -344,7 +367,11 @@ class _OverviewSection extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Icon(Icons.person_outline_rounded, size: 20, color: AppColors.textSecondary),
+              Icon(
+                Icons.person_outline_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -355,9 +382,9 @@ class _OverviewSection extends StatelessWidget {
               Text(
                 '₱${service.pricePerHour.toStringAsFixed(0)}/hr',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -383,16 +410,19 @@ class _MeetYourHostSection extends StatelessWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: AppColors.primary.withAlpha(31),
-            backgroundImage: host.avatarUrl != null && host.avatarUrl!.isNotEmpty
+            backgroundImage:
+                host.avatarUrl != null && host.avatarUrl!.isNotEmpty
                 ? NetworkImage(host.avatarUrl!)
                 : null,
             child: host.avatarUrl == null || host.avatarUrl!.isEmpty
                 ? Text(
-                    host.fullName.isNotEmpty ? host.fullName[0].toUpperCase() : '?',
+                    host.fullName.isNotEmpty
+                        ? host.fullName[0].toUpperCase()
+                        : '?',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   )
                 : null,
           ),
@@ -405,27 +435,38 @@ class _MeetYourHostSection extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        host.fullName.isNotEmpty ? host.fullName : service.providerName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        host.fullName.isNotEmpty
+                            ? host.fullName
+                            : service.providerName,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     if (host.isVerified)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withAlpha(25),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusFull,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.verified_rounded, size: 16, color: AppColors.primary),
+                            Icon(
+                              Icons.verified_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'Verified',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -440,16 +481,13 @@ class _MeetYourHostSection extends StatelessWidget {
                   Text(
                     host.serviceArea,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
                 if (host.bio.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    host.bio,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  Text(host.bio, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ],
             ),
@@ -479,7 +517,11 @@ class _ThingsToKnowSection extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -496,107 +538,291 @@ class _ThingsToKnowSection extends StatelessWidget {
   }
 }
 
-
-
-class _ReviewsSummarySection extends StatelessWidget {
+class _ReviewsSummarySection extends ConsumerWidget {
   const _ReviewsSummarySection({required this.service});
 
   final ServiceModel service;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviews =
+        ref.watch(serviceReviewsProvider(service.id)).valueOrNull ?? const [];
+    final count = reviews.isNotEmpty ? reviews.length : service.reviewCount;
+    final avg = reviews.isNotEmpty
+        ? (reviews.fold<double>(0, (sum, r) => sum + r.ratingOverall) /
+              reviews.length)
+        : service.rating;
+    final score = avg.toStringAsFixed(1);
     return _CardSection(
       title: 'Reviews',
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.star_rounded, size: 24, color: AppColors.warning),
-          const SizedBox(width: 8),
-          Text(
-            service.rating.toStringAsFixed(1),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              StarRating(rating: avg, size: 18, spacing: 0),
+              const SizedBox(width: 8),
+              Text(
+                score,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '($count reviews)',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          Text(
-            '(${service.reviewCount} reviews)',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          const SizedBox(height: AppSpacing.md),
+          _ServiceReviewsList(serviceId: service.id),
         ],
       ),
     );
   }
 }
 
-class _ActionsSection extends ConsumerWidget {
-  const _ActionsSection({required this.service});
+class _ServiceReviewsList extends ConsumerWidget {
+  const _ServiceReviewsList({required this.serviceId});
+
+  final String serviceId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reviewsAsync = ref.watch(serviceReviewsProvider(serviceId));
+    return reviewsAsync.when(
+      data: (reviews) {
+        if (reviews.isEmpty) {
+          return Text(
+            'No public reviews yet. Be the first to rate this service.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          );
+        }
+
+        final visible = reviews.take(6).toList();
+        return Column(
+          children: [
+            for (int i = 0; i < visible.length; i++) ...[
+              _ServiceReviewTile(review: visible[i]),
+              if (i < visible.length - 1) const Divider(height: AppSpacing.lg),
+            ],
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      ),
+      error: (_, _) => Text(
+        'Could not load reviews right now.',
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+      ),
+    );
+  }
+}
+
+class _ServiceReviewTile extends StatelessWidget {
+  const _ServiceReviewTile({required this.review});
+
+  final ReviewModel review;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = review.createdAt == null
+        ? 'Recently'
+        : DateFormat('MMM d, y').format(review.createdAt!.toLocal());
+    final comment = review.comment.trim();
+
+    final roleType = review.roleType.trim().toLowerCase();
+    final reviewerLabel = roleType == 'guest_to_host'
+        ? 'Verified customer'
+        : 'Verified reviewer';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+          child: Text(
+            'U',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    reviewerLabel,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    dateLabel,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  StarRating(
+                    rating: review.ratingOverall,
+                    size: 16,
+                    spacing: 0,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    review.ratingOverall.toStringAsFixed(1),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              if (comment.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(comment, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FloatingActionsBar extends ConsumerWidget {
+  const _FloatingActionsBar({required this.service});
 
   final ServiceModel service;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.98),
+          border: Border(
+            top: BorderSide(color: AppColors.divider.withValues(alpha: 0.75)),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 22,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => context.push('/booking/flow?nearest=true', extra: service),
-                icon: const Icon(Icons.near_me_rounded, size: 20),
-                label: const Text('Book nearest'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      '/booking/flow?nearest=true',
+                      extra: service,
+                    ),
+                    icon: const Icon(Icons.near_me_rounded, size: 18),
+                    label: const Text('Book nearest'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.5),
+                      ),
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.04,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: () => context.push('/booking/flow', extra: service),
-                icon: const Icon(Icons.calendar_today_rounded, size: 20),
-                label: const Text('Book this provider'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        context.push('/booking/flow', extra: service),
+                    icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                    label: const Text('Book this provider'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                      ),
+                    ),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: service.providerId == null
+                  ? null
+                  : () async {
+                      final repo = ref.read(apiRepositoryProvider);
+                      final thread = await repo.createDirectThread(
+                        serviceId: service.id,
+                        providerId: service.providerId!,
+                        serviceTitle: service.title,
+                        providerName: service.providerName,
+                      );
+                      if (thread == null) return;
+                      if (!context.mounted) return;
+                      context.push('/messages/${thread.id}');
+                    },
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+              label: const Text('Message host'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: BorderSide(color: AppColors.divider),
+                backgroundColor: AppColors.surface,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
-        ElevatedButton.icon(
-          onPressed: service.providerId == null
-              ? null
-              : () async {
-                  final repo = ref.read(apiRepositoryProvider);
-                  final thread = await repo.createDirectThread(
-                    serviceId: service.id,
-                    providerId: service.providerId!,
-                    serviceTitle: service.title,
-                    providerName: service.providerName,
-                  );
-                  if (thread == null) return;
-                  if (!context.mounted) return;
-                  context.push('/messages/${thread.id}');
-                },
-          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-          label: const Text('Message host'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.surface,
-            foregroundColor: AppColors.textPrimary,
-            side: BorderSide(color: AppColors.divider),
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

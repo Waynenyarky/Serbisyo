@@ -4,14 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/api_providers.dart';
 import '../theme/app_colors.dart';
+import '../../features/home/presentation/home_screen.dart';
 import '../../features/favorites/presentation/favorites_screen.dart';
 import '../../features/provider/presentation/my_services_screen.dart';
+import '../../features/provider/presentation/host_home_screen.dart';
+import '../../features/booking/presentation/bookings_screen.dart';
+import '../../features/provider/presentation/provider_bookings_dashboard_screen.dart';
 
 class ShellScaffold extends ConsumerWidget {
-  const ShellScaffold({
-    required this.navigationShell,
-    super.key,
-  });
+  const ShellScaffold({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
@@ -19,10 +20,17 @@ class ShellScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     final isProvider = userAsync.valueOrNull?.isProviderRole ?? false;
+    final experienceMode = ref.watch(appExperienceModeProvider);
+    final isHostMode = isProvider && experienceMode == 'host';
     final favoritesAsync = ref.watch(favoritesIdsProvider);
     final favoriteCount = favoritesAsync.valueOrNull?.length ?? 0;
     final threadsAsync = ref.watch(threadsProvider);
-    final unreadMessages = threadsAsync.valueOrNull?.fold<int>(0, (sum, t) => sum + t.unreadCount) ?? 0;
+    final unreadMessages =
+        threadsAsync.valueOrNull?.fold<int>(
+          0,
+          (sum, t) => sum + t.unreadCount,
+        ) ??
+        0;
 
     return Scaffold(
       body: navigationShell,
@@ -52,13 +60,19 @@ class ShellScaffold extends ConsumerWidget {
                   onTap: () => _onTap(context, 0),
                 ),
                 _NavItem(
-                  icon: isProvider ? Icons.work_outline_rounded : Icons.favorite_border_rounded,
-                  activeIcon: isProvider ? Icons.work_rounded : Icons.favorite_rounded,
-                  label: isProvider ? 'My services' : 'Favorites',
+                  icon: isHostMode
+                      ? Icons.work_outline_rounded
+                      : Icons.favorite_border_rounded,
+                  activeIcon: isHostMode
+                      ? Icons.work_rounded
+                      : Icons.favorite_rounded,
+                  label: isHostMode ? 'My services' : 'Favorites',
                   index: 1,
                   currentIndex: navigationShell.currentIndex,
                   onTap: () => _onTap(context, 1),
-                  badgeCount: isProvider ? null : (favoriteCount > 0 ? favoriteCount : null),
+                  badgeCount: isHostMode
+                      ? null
+                      : (favoriteCount > 0 ? favoriteCount : null),
                 ),
                 _NavItem(
                   icon: Icons.calendar_today_outlined,
@@ -101,17 +115,51 @@ class ShellScaffold extends ConsumerWidget {
   }
 }
 
+/// Shows customer home in customer mode and host dashboard in host mode.
+class ShellHomeByMode extends ConsumerWidget {
+  const ShellHomeByMode({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isProvider =
+        ref.watch(currentUserProvider).valueOrNull?.isProviderRole ?? false;
+    final mode = ref.watch(appExperienceModeProvider);
+    if (isProvider && mode == 'host') {
+      return const HostHomeScreen();
+    }
+    return const HomeScreen();
+  }
+}
+
 /// Shows Favorites for customers and My services for providers (shell tab 1).
 class ShellFavoritesOrMyServices extends ConsumerWidget {
   const ShellFavoritesOrMyServices({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isProvider = ref.watch(currentUserProvider).valueOrNull?.isProviderRole ?? false;
-    if (isProvider) {
+    final isProvider =
+        ref.watch(currentUserProvider).valueOrNull?.isProviderRole ?? false;
+    final mode = ref.watch(appExperienceModeProvider);
+    if (isProvider && mode == 'host') {
       return const MyServicesScreen(showBackButton: false);
     }
     return const FavoritesScreen();
+  }
+}
+
+/// Shows customer bookings in customer mode and host dashboard in host mode.
+class ShellBookingsOrHostBookings extends ConsumerWidget {
+  const ShellBookingsOrHostBookings({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isProvider =
+        ref.watch(currentUserProvider).valueOrNull?.isProviderRole ?? false;
+    final mode = ref.watch(appExperienceModeProvider);
+    if (isProvider && mode == 'host') {
+      return const ProviderBookingsDashboardScreen(showBackButton: false);
+    }
+    return const BookingsScreen();
   }
 }
 
@@ -132,6 +180,7 @@ class _NavItem extends StatelessWidget {
   final int index;
   final int currentIndex;
   final VoidCallback onTap;
+
   /// When non-null and > 0, shows a red bubble with count on the icon.
   final int? badgeCount;
 
@@ -153,7 +202,9 @@ class _NavItem extends StatelessWidget {
                 Icon(
                   isSelected ? activeIcon : icon,
                   size: 24,
-                  color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.textTertiary,
                 ),
                 if (showBadge) _buildBadge(context),
               ],
@@ -201,11 +252,11 @@ class _NavItem extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 10,
-                height: 1.1,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 10,
+            height: 1.1,
+          ),
           textAlign: TextAlign.center,
         ),
       ),

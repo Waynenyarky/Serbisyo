@@ -12,13 +12,53 @@ router.use(authMiddleware);
 // List threads: customer = where userId=me, provider = where providerId=me
 router.get('/threads', requirePermission('messages.read'), async (req, res) => {
   try {
-    const filter = req.user.roleSlug === 'provider'
+    const q = (req.query.q || '').toString().trim();
+    const unreadOnly = (req.query.unreadOnly || '').toString().toLowerCase() === 'true';
+    const type = (req.query.type || '').toString().trim().toLowerCase();
+    const participantFilter = req.user.roleSlug === 'provider'
       ? { providerId: req.user.id }
       : { userId: req.user.id };
-    const threads = await MessageThread.find(filter).lean();
-    const list = threads.map(t => {
+    const andFilters = [participantFilter];
+
+    if (q) {
+      const safeRegex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      andFilters.push({
+        $or: [
+          { providerName: safeRegex },
+          { serviceTitle: safeRegex },
+          { messages: { $elemMatch: { text: safeRegex } } },
+        ],
+      });
+    }
+
+    if (type === 'direct') {
+      andFilters.push({
+        $or: [{ bookingId: null }, { bookingId: { $exists: false } }],
+      });
+    } else if (type === 'booking') {
+      andFilters.push({ bookingId: { $ne: null } });
+    } else if (type === 'support') {
+      const supportRegex = /support/i;
+      andFilters.push({
+        $or: [{ providerName: supportRegex }, { serviceTitle: supportRegex }],
+      });
+      andFilters.push({
+        $or: [{ bookingId: null }, { bookingId: { $exists: false } }],
+      });
+    }
+
+    const filter = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+
+    const threads = await MessageThread.find(filter).sort({ updatedAt: -1 }).lean();
+    let list = threads.map(t => {
       const lastMsg = t.messages?.length ? t.messages[t.messages.length - 1] : null;
       const unreadCount = (t.messages || []).filter(m => !m.readAt && m.senderId?.toString() !== req.user.id).length;
+      const isDirect = !t.bookingId;
+      const inferredType = isDirect
+        ? ((t.providerName || '').toLowerCase().includes('support') || (t.serviceTitle || '').toLowerCase().includes('support')
+            ? 'support'
+            : 'direct')
+        : 'booking';
       return {
         id: t._id.toString(),
         providerName: t.providerName,
@@ -26,8 +66,12 @@ router.get('/threads', requirePermission('messages.read'), async (req, res) => {
         lastMessage: lastMsg?.text ?? '',
         lastMessageAt: lastMsg ? new Date(lastMsg.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
         unreadCount,
+        type: inferredType,
       };
     });
+    if (unreadOnly) {
+      list = list.filter(t => t.unreadCount > 0);
+    }
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });

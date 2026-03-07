@@ -8,10 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({
-    required this.threadId,
-    super.key,
-  });
+  const ChatScreen({required this.threadId, super.key});
 
   final String threadId;
 
@@ -57,12 +54,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
+            toolbarHeight: 68,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(thread.providerName),
-                Text(thread.serviceTitle, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  thread.providerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  thread.serviceTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
             backgroundColor: AppColors.surface,
@@ -83,7 +90,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final bubble = messages[messages.length - 1 - index];
-                    return _Bubble(text: bubble.text, isMe: bubble.isMe, time: bubble.time);
+                    return _Bubble(
+                      text: bubble.text,
+                      isMe: bubble.isMe,
+                      time: bubble.time,
+                    );
                   },
                 ),
               ),
@@ -98,8 +109,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           controller: _messageController,
                           decoration: InputDecoration(
                             hintText: 'Type a message...',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                           ),
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _sendMessage(),
@@ -109,7 +125,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       IconButton.filled(
                         onPressed: _sendMessage,
                         icon: const Icon(Icons.send_rounded),
-                        style: IconButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -121,8 +140,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       },
       loading: () => Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(title: const Text('Chat'), backgroundColor: AppColors.surface),
-        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        appBar: AppBar(
+          title: const Text('Chat'),
+          backgroundColor: AppColors.surface,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       ),
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Chat')),
@@ -145,7 +169,10 @@ class _Bubble extends StatelessWidget {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
           color: isMe ? AppColors.primary : AppColors.surface,
           borderRadius: BorderRadius.only(
@@ -154,7 +181,13 @@ class _Bubble extends StatelessWidget {
             bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -162,12 +195,17 @@ class _Bubble extends StatelessWidget {
           children: [
             Text(
               text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isMe ? Colors.white : AppColors.textPrimary),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isMe ? Colors.white : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               time,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: isMe ? Colors.white70 : AppColors.textTertiary, fontSize: 10),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: isMe ? Colors.white70 : AppColors.textTertiary,
+                fontSize: 10,
+              ),
             ),
           ],
         ),

@@ -8,11 +8,32 @@ const bookingSchema = new mongoose.Schema({
   providerName: { type: String, required: true },
   scheduledDate: { type: String, required: true },
   scheduledTime: { type: String, required: true },
+  scheduledAt: { type: Date },
   address: { type: String, required: true },
-  status: { type: String, enum: ['upcoming', 'completed', 'cancelled'], default: 'upcoming' },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'declined', 'cancelled', 'ongoing', 'completed'],
+    default: 'pending',
+  },
+  statusReason: { type: String },
+  respondedAt: { type: Date },
+  cancelledAt: { type: Date },
+  completedAt: { type: Date },
+  statusUpdatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  cancelledByRole: { type: String, enum: ['customer', 'provider', 'system'] },
   totalAmount: { type: Number, required: true },
   imageUrl: { type: String },
+  cancellationPolicy: { type: String, enum: ['flexible', 'moderate', 'strict'], default: 'flexible' },
+  refundAmount: { type: Number, default: 0 },
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'authorized', 'paid', 'refunded', 'failed'],
+    default: 'unpaid',
+  },
 }, { timestamps: true });
+
+bookingSchema.index({ userId: 1, scheduledAt: 1, createdAt: -1 });
+bookingSchema.index({ providerId: 1, scheduledAt: 1, createdAt: -1 });
 
 bookingSchema.set('toJSON', {
   virtuals: true,

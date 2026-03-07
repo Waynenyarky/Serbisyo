@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow camera access so hosts can take service photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow photo library access so hosts can choose service photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Allow saving selected service photos when needed.</string>
 </dict>
 </plist>

@@ -10,7 +10,21 @@ class BookingModel {
     required this.address,
     required this.status,
     required this.totalAmount,
+    this.scheduledAt,
+    this.userId,
+    this.providerId,
     this.imageUrl,
+    this.statusReason,
+    this.respondedAt,
+    this.cancelledAt,
+    this.completedAt,
+    this.statusUpdatedBy,
+    this.cancelledByRole,
+    this.cancellationPolicy = 'flexible',
+    this.refundAmount = 0,
+    this.paymentStatus = 'unpaid',
+    this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -20,7 +34,21 @@ class BookingModel {
   final String scheduledDate;
   final String scheduledTime;
   final String address;
-  final String status; // e.g. 'upcoming', 'completed', 'cancelled'
+  final String status; // pending|confirmed|declined|cancelled|ongoing|completed
   final double totalAmount;
+  final DateTime? scheduledAt;
+  final String? userId;
+  final String? providerId;
   final String? imageUrl;
+  final String? statusReason;
+  final DateTime? respondedAt;
+  final DateTime? cancelledAt;
+  final DateTime? completedAt;
+  final String? statusUpdatedBy;
+  final String? cancelledByRole;
+  final String cancellationPolicy;
+  final double refundAmount;
+  final String paymentStatus; // unpaid|authorized|paid|refunded|failed
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 }

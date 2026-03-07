@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/models/service_model.dart';
 import 'premium_service_image.dart';
+import 'star_rating.dart';
 
 /// Premium card showing a service with hero image, title, rating, and price.
 class ServiceCard extends StatelessWidget {
@@ -21,16 +22,22 @@ class ServiceCard extends StatelessWidget {
   final VoidCallback onTap;
   final bool isFavorite;
   final VoidCallback? onFavoriteTap;
+
   /// Compact layout for grid tiles and small screens.
   final bool dense;
+
   /// Image ratio for the card header (width / height).
   final double imageAspectRatio;
 
   @override
   Widget build(BuildContext context) {
     final titleStyle = dense
-        ? Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
-        : Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600);
+        ? Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)
+        : Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600);
     final pad = dense ? 10.0 : AppSpacing.md;
     final titleMaxLines = dense ? 2 : 1;
     final vGap = dense ? 4.0 : 6.0;
@@ -93,8 +100,12 @@ class ServiceCard extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                              color: isFavorite ? AppColors.error : Colors.white,
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isFavorite
+                                  ? AppColors.error
+                                  : Colors.white,
                               size: dense ? 20 : 22,
                             ),
                           ),
@@ -117,21 +128,24 @@ class ServiceCard extends StatelessWidget {
                     SizedBox(height: vGap),
                     Row(
                       children: [
-                        Icon(
-                          Icons.star_rounded,
-                          size: dense ? 16 : 18,
-                          color: AppColors.warning,
+                        StarRating(
+                          rating: service.rating,
+                          size: dense ? 14 : 16,
+                          spacing: 0,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${service.rating}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          service.rating.toStringAsFixed(1),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
                               ),
                         ),
                         Text(
-                          dense ? ' (${service.reviewCount})' : ' (${service.reviewCount} reviews)',
+                          dense
+                              ? ' (${service.reviewCount})'
+                              : ' (${service.reviewCount} reviews)',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

@@ -1,11 +1,39 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 const Service = require('../models/Service');
+const Review = require('../models/Review');
 const ServiceCategory = require('../models/ServiceCategory');
 const { authMiddleware } = require('./auth');
 const { requireRole } = require('../middleware/rbac');
 
 const router = express.Router();
+const uploadsRoot = path.join(__dirname, '..', 'uploads', 'services');
+
+if (!fs.existsSync(uploadsRoot)) {
+  fs.mkdirSync(uploadsRoot, { recursive: true });
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsRoot),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase() || '.jpg';
+      const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
+      cb(null, `service-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const mime = (file.mimetype || '').toLowerCase();
+    if (mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/webp') {
+      return cb(null, true);
+    }
+    return cb(new Error('Only JPG, PNG, and WEBP images are allowed'));
+  },
+});
 
 function isValidObjectId(value) {
   return mongoose.Types.ObjectId.isValid(value);
@@ -19,6 +47,46 @@ function parsePositiveInt(value, fallback) {
 
 function escapeRegex(input) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function attachComputedRatings(services) {
+  if (!Array.isArray(services) || services.length === 0) return;
+  const serviceIds = services
+    .map((s) => s?._id)
+    .filter(Boolean);
+  if (serviceIds.length === 0) return;
+  const serviceIdStrings = serviceIds.map((id) => id.toString());
+
+  const metrics = await Review.aggregate([
+    {
+      $addFields: {
+        serviceIdString: { $toString: '$serviceId' },
+      },
+    },
+    {
+      $match: {
+        serviceIdString: { $in: serviceIdStrings },
+        roleType: 'guest_to_host',
+      },
+    },
+    {
+      $group: {
+        _id: '$serviceIdString',
+        reviewCount: { $sum: 1 },
+        rating: { $avg: '$ratingOverall' },
+      },
+    },
+  ]);
+
+  const byServiceId = new Map(metrics.map((m) => [m._id?.toString(), m]));
+  for (const service of services) {
+    const key = service?._id?.toString();
+    if (!key) continue;
+    const computed = byServiceId.get(key);
+    if (!computed) continue;
+    service.reviewCount = Number(computed.reviewCount || 0);
+    service.rating = Number(computed.rating || 0);
+  }
 }
 
 // Public list: only active services (supports categoryId, providerId, q, pagination, sort)
@@ -94,6 +162,7 @@ router.get('/', async (req, res) => {
       .skip(skip)
       .limit(cappedLimit)
       .lean();
+    await attachComputedRatings(services);
 
     const list = services.map(s => ({
       id: s._id.toString(),
@@ -110,6 +179,7 @@ router.get('/', async (req, res) => {
       locationDescription: s.locationDescription || null,
       availability: s.availability || null,
       thingsToKnow: s.thingsToKnow || null,
+      createdAt: s.createdAt || null,
     }));
 
     res.json(list);
@@ -122,6 +192,7 @@ router.get('/', async (req, res) => {
 router.get('/mine', authMiddleware, requireRole('provider'), async (req, res) => {
   try {
     const services = await Service.find({ providerId: req.user.id }).populate('categoryId', 'name').sort({ createdAt: -1 }).lean();
+    await attachComputedRatings(services);
     const list = services.map(s => ({
       id: s._id.toString(),
       title: s.title,
@@ -133,7 +204,12 @@ router.get('/mine', authMiddleware, requireRole('provider'), async (req, res) =>
       pricePerHour: s.pricePerHour,
       providerName: s.providerName,
       description: s.description || null,
+      offers: s.offers || null,
+      locationDescription: s.locationDescription || null,
+      availability: s.availability || null,
+      thingsToKnow: s.thingsToKnow || null,
       status: s.status || 'draft',
+      createdAt: s.createdAt || null,
     }));
     res.json(list);
   } catch (err) {
@@ -147,6 +223,7 @@ router.get('/:id', async (req, res) => {
     if (!service) return res.status(404).json({ error: 'Service not found' });
     // Public: only show active services
     if (service.status !== 'active') return res.status(404).json({ error: 'Service not found' });
+    await attachComputedRatings([service]);
     res.json({
       id: service._id.toString(),
       title: service.title,
@@ -162,6 +239,7 @@ router.get('/:id', async (req, res) => {
       locationDescription: service.locationDescription || null,
       availability: service.availability || null,
       thingsToKnow: service.thingsToKnow || null,
+      createdAt: service.createdAt || null,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -202,6 +280,7 @@ router.post('/', authMiddleware, requireRole('provider'), async (req, res) => {
       imageUrl: populated.imageUrl || null,
       description: populated.description || null,
       status: populated.status || 'draft',
+      createdAt: populated.createdAt || null,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -250,9 +329,77 @@ router.patch('/:id', authMiddleware, requireRole('provider'), async (req, res) =
       availability: populated.availability || null,
       thingsToKnow: populated.thingsToKnow || null,
       status: populated.status || 'draft',
+      createdAt: populated.createdAt || null,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Provider-only: delete a service (owner only).
+router.delete('/:id', authMiddleware, requireRole('provider'), async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+    if (service.providerId?.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Not allowed to delete this service' });
+    }
+
+    const imageUrl = service.imageUrl || '';
+    if (typeof imageUrl === 'string' && imageUrl.includes('/uploads/services/')) {
+      const fileName = imageUrl.split('/uploads/services/').pop();
+      if (fileName) {
+        const filePath = path.join(uploadsRoot, fileName);
+        fs.unlink(filePath, () => {});
+      }
+    }
+
+    await service.deleteOne();
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Provider-only: upload and set service photo (owner only).
+router.post('/:id/photo', authMiddleware, requireRole('provider'), upload.single('image'), async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+    if (service.providerId?.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Not allowed to update this service' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Image file is required' });
+    }
+
+    const publicUrl = `${req.protocol}://${req.get('host')}/uploads/services/${req.file.filename}`;
+    service.imageUrl = publicUrl;
+    await service.save();
+
+    const populated = await Service.findById(service._id).populate('categoryId', 'name').lean();
+    res.json({
+      id: populated._id.toString(),
+      title: populated.title,
+      categoryId: populated.categoryId?._id?.toString() ?? populated.categoryId,
+      providerId: populated.providerId?.toString(),
+      providerName: populated.providerName,
+      pricePerHour: populated.pricePerHour,
+      imageUrl: populated.imageUrl || null,
+      description: populated.description || null,
+      offers: populated.offers || null,
+      locationDescription: populated.locationDescription || null,
+      availability: populated.availability || null,
+      thingsToKnow: populated.thingsToKnow || null,
+      status: populated.status || 'draft',
+      createdAt: populated.createdAt || null,
+    });
+  } catch (err) {
+    const msg = err?.message || 'Could not upload image';
+    if (msg.includes('Only JPG') || msg.includes('File too large')) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: msg });
   }
 });
 

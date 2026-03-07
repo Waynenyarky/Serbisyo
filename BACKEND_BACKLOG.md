@@ -1,18 +1,27 @@
 # Serbisyo Backend Backlog
 
-Last updated: 2026-03-03
+Last updated: 2026-03-07
 
 ## Progress Snapshot
 - Stories: 15
-- Done: 6
+- Done: 8
 - Partial: 2
-- Not Started: 7
-- Progress: 46.7%
+- Not Started: 5
+- Progress: 60.0%
 
 Tracking scale:
 - DONE = 1
 - PARTIAL = 0.5
 - NOT_STARTED = 0
+
+## Recent Implemented Updates (2026-03-07)
+- ✅ **Provider booking actions API completed:** explicit accept/decline/start/complete handlers added with compatibility routes.
+- ✅ **Role-explicit booking queries/mutations:** `as` role context and actor resolution improved to avoid host/customer ambiguity.
+- ✅ **Booking action permission hardening:** status transition permissions mapped and enforced to prevent unauthorized updates.
+- ✅ **Service/provider consistency checks:** booking creation validates service-provider linkage and blocks self-booking.
+- ✅ **Ratings recomputation fixed:** review aggregation and service rating recompute hardened for ObjectId/string matching cases.
+- ✅ **Services API now returns computed ratings consistently:** list/detail/mine endpoints attach up-to-date rating and review counts.
+- ✅ **Reviews API filtering expanded:** service/role filters supported for cleaner mobile review consumption.
 
 ## Backend Backlog
 
@@ -61,7 +70,7 @@ Tracking scale:
     - Add no-candidate fallback response contract. ✅
 
 ### Epic BE-E03: Booking Domain and Orchestration
-**Progress:** 1 Done / 0 Partial / 1 Not Started (2 stories) → **50.0%**
+**Progress:** 2 Done / 0 Partial / 0 Not Started (2 stories) → **100.0%**
 
 - **Feature BE-F05: Booking state machine hardening**
   - **Story BE-S05** `[x] DONE`
@@ -73,12 +82,13 @@ Tracking scale:
     - Emit booking state change events/logs. ✅
 
 - **Feature BE-F06: Provider booking actions API**
-  - **Story BE-S06** `[ ] NOT_STARTED`
+  - **Story BE-S06** `[x] DONE`
   - Priority: P0 | SP: 5 | Effort: M | Depends on: M-S06
+  - Update: Added action handlers and route compatibility for host actions, transition permission checks, role-context safety, and timeline-relevant mutation metadata.
   - Tasks:
-    - Add provider action routes (accept/reject/complete).
-    - Persist action metadata.
-    - Return timeline-friendly payload for mobile.
+    - Add provider action routes (accept/reject/complete). ✅
+    - Persist action metadata. ✅
+    - Return timeline-friendly payload for mobile. ✅
 
 ### Epic BE-E04: Payments and Policy Compliance
 **Progress:** 0 Done / 0 Partial / 2 Not Started (2 stories) → **0.0%**
@@ -100,7 +110,7 @@ Tracking scale:
     - Add admin-facing transaction filters.
 
 ### Epic BE-E05: Messaging Moderation and Trust Safety
-**Progress:** 1 Done / 0 Partial / 2 Not Started (3 stories) → **33.3%**
+**Progress:** 2 Done / 0 Partial / 1 Not Started (3 stories) → **66.7%**
 
 - **Feature BE-F09: Booking-thread messaging controls**
   - **Story BE-S09** `[x] DONE`
@@ -120,12 +130,13 @@ Tracking scale:
     - Add flagged-content review query endpoints.
 
 - **Feature BE-F11: Reviews domain and provider rating aggregation**
-  - **Story BE-S11** `[ ] NOT_STARTED`
+  - **Story BE-S11** `[x] DONE`
   - Priority: P1 | SP: 5 | Effort: M | Depends on: M-S10
+  - Update: Reviews create/list endpoints are active, service-level review filtering is supported, and provider/service aggregates are recomputed and attached in service endpoints.
   - Tasks:
-    - Add `Reviews` model and booking uniqueness constraint.
-    - Add create/list review endpoints.
-    - Update provider aggregate in `Users.ratings`.
+    - Add `Reviews` model and booking uniqueness constraint. ✅
+    - Add create/list review endpoints. ✅
+    - Update provider/service aggregate values. ✅
 
 ### Epic BE-E06: Superadmin Operations and Analytics
 **Progress:** 0 Done / 0 Partial / 2 Not Started (2 stories) → **0.0%**
@@ -176,7 +187,7 @@ Tracking scale:
 - `BE-S03` `[x] DONE`
 - `BE-S04` `[x] DONE`
 - `BE-S05` `[x] DONE`
-- `BE-S06` `[ ] NOT_STARTED`
+- `BE-S06` `[x] DONE`
 - `BE-S07` `[ ] NOT_STARTED`
 - `BE-S09` `[x] DONE`
 - `BE-S10` `[ ] NOT_STARTED`

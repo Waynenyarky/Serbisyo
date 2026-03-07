@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/api/favorites_storage.dart';
 import '../../../core/models/service_model.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -19,6 +18,17 @@ class FavoritesScreen extends ConsumerWidget {
     final favoritesAsync = ref.watch(favoriteServicesProvider);
     final recentlyViewedAsync = ref.watch(recentlyViewedServicesProvider);
     final listNameAsync = ref.watch(favoriteListNameProvider);
+    Future<void> refreshFavorites() async {
+      ref.invalidate(favoriteServicesProvider);
+      ref.invalidate(favoritesIdsProvider);
+      ref.invalidate(recentlyViewedIdsProvider);
+      ref.invalidate(recentlyViewedServicesProvider);
+      ref.invalidate(favoriteListNameProvider);
+      await Future.wait([
+        ref.read(favoriteServicesProvider.future),
+        ref.read(recentlyViewedServicesProvider.future),
+      ]);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -26,10 +36,10 @@ class FavoritesScreen extends ConsumerWidget {
         title: Text(
           'Favorites',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.3,
-              ),
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.3,
+          ),
         ),
         backgroundColor: AppColors.surface,
         elevation: 0,
@@ -45,17 +55,22 @@ class FavoritesScreen extends ConsumerWidget {
                   onTap: () {},
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.background,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
                     ),
                     child: Text(
                       'Edit',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ),
@@ -68,59 +83,100 @@ class FavoritesScreen extends ConsumerWidget {
         data: (favorites) {
           return recentlyViewedAsync.when(
             data: (recentlyViewed) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _SectionCard(
-                      title: 'Recently viewed',
-                      subtitle: 'Latest',
-                      child: recentlyViewed.isEmpty
-                          ? _GridPlaceholder(
-                              message: 'Services you view will appear here.',
-                              onTap: () => context.push('/'),
-                            )
-                          : _RecentlyViewedGrid(
-                              services: recentlyViewed,
-                              ref: ref,
-                            ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _SectionCard(
-                      title: listNameAsync.valueOrNull ?? 'Saved',
-                      subtitle: favorites.isEmpty ? '0 saved' : '${favorites.length} saved',
-                      child: favorites.isEmpty
-                          ? _GridPlaceholder(
-                              message: 'Tap the heart on any service to save it here.',
-                              onTap: () => context.push('/'),
-                            )
-                          : _SavedList(favorites: favorites, ref: ref),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-                  ],
+              return RefreshIndicator(
+                onRefresh: refreshFavorites,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _SectionCard(
+                        title: 'Recently viewed',
+                        subtitle: 'Latest',
+                        child: recentlyViewed.isEmpty
+                            ? _GridPlaceholder(
+                                message: 'Services you view will appear here.',
+                                onTap: () => context.push('/'),
+                              )
+                            : _RecentlyViewedGrid(
+                                services: recentlyViewed,
+                                ref: ref,
+                              ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _SectionCard(
+                        title: listNameAsync.valueOrNull ?? 'Saved',
+                        subtitle: favorites.isEmpty
+                            ? '0 saved'
+                            : '${favorites.length} saved',
+                        child: favorites.isEmpty
+                            ? _GridPlaceholder(
+                                message:
+                                    'Tap the heart on any service to save it here.',
+                                onTap: () => context.push('/'),
+                              )
+                            : _SavedList(favorites: favorites, ref: ref),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
+                  ),
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-            error: (e, st) => _buildContent(context, ref, favorites, [], listNameAsync.valueOrNull ?? 'Saved'),
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+            error: (e, st) => RefreshIndicator(
+              onRefresh: refreshFavorites,
+              child: _buildContent(
+                context,
+                ref,
+                favorites,
+                [],
+                listNameAsync.valueOrNull ?? 'Saved',
+              ),
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Could not load favorites', style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => ref.invalidate(favoriteServicesProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+        error: (e, _) => RefreshIndicator(
+          onRefresh: refreshFavorites,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.sizeOf(context).height * 0.55,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Could not load favorites',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () =>
+                              ref.invalidate(favoriteServicesProvider),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -135,6 +191,9 @@ class FavoritesScreen extends ConsumerWidget {
     String savedSectionTitle,
   ) {
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -196,19 +255,25 @@ class _SectionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
+                    color: AppColors.textTertiary,
+                  ),
                 ),
               ],
             ),
@@ -235,7 +300,10 @@ class _RecentlyViewedGrid extends StatelessWidget {
     final items = services.take(_gridCount).toList();
 
     if (items.isEmpty) {
-      return _GridPlaceholder(message: 'Services you view will appear here.', onTap: () => context.push('/'));
+      return _GridPlaceholder(
+        message: 'Services you view will appear here.',
+        onTap: () => context.push('/'),
+      );
     }
 
     return AspectRatio(
@@ -276,11 +344,17 @@ class _RecentlyViewedGrid extends StatelessWidget {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () async {
+                          final repo = ref.read(apiRepositoryProvider);
                           if (isFav) {
-                            await removeFavorite(service.id);
+                            await repo.removeFavoriteService(service.id);
+                            ref.invalidate(favoriteServicesProvider);
                             ref.invalidate(favoritesIdsProvider);
                           } else {
-                            await addServiceToFavorites(context, ref, service.id);
+                            await addServiceToFavorites(
+                              context,
+                              ref,
+                              service.id,
+                            );
                           }
                         },
                         borderRadius: BorderRadius.circular(20),
@@ -291,7 +365,9 @@ class _RecentlyViewedGrid extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
                             color: isFav ? AppColors.error : Colors.white,
                             size: 20,
                           ),
@@ -329,9 +405,9 @@ class _GridPlaceholder extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             message,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textTertiary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
             textAlign: TextAlign.center,
           ),
         ),
@@ -353,7 +429,8 @@ class _SavedList extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: favorites.length,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         final service = favorites[index];
         final isFav = ref.watch(isFavoriteProvider(service.id));

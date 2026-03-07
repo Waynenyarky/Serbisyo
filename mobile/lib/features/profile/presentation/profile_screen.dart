@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/api/profile_storage.dart';
+import '../../../core/api/auth_storage.dart';
+import '../../../core/api/experience_mode_storage.dart';
 import '../../../core/providers/api_providers.dart';
 import '../../../core/repository/api_repository.dart';
 import '../../../core/theme/app_colors.dart';
@@ -18,11 +20,13 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _notificationsEnabled = true;
   final int _unreadCount = 0; // Could be from API later
+  bool _switchingMode = false;
 
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
     final providerStatusAsync = ref.watch(providerStatusProvider);
+    final experienceMode = ref.watch(appExperienceModeProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -30,9 +34,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: Text(
           'Profile',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
         ),
         backgroundColor: AppColors.surface,
         elevation: 0,
@@ -61,7 +65,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _ProviderExploreCard(
                 userAsync: userAsync,
                 providerStatusAsync: providerStatusAsync,
-                onBecomeHost: () => context.push('/signup?role=provider'),
+                experienceMode: experienceMode,
+                switchingMode: _switchingMode,
+                onBecomeHost: () => context.push('/become-host'),
+                onSwitchMode: _switchExperienceMode,
+                onGoCustomerBooking: () => context.go('/'),
                 onCompleteService: () => context.push('/provider/onboarding'),
                 onMyServices: () => context.push('/provider/services'),
               ),
@@ -127,6 +135,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _onNotificationsTap() {
     context.push('/notifications');
+  }
+
+  Future<void> _switchExperienceMode(String mode) async {
+    if (_switchingMode) return;
+    final normalized = mode.trim().toLowerCase();
+    if (normalized != 'customer' && normalized != 'host') return;
+
+    setState(() => _switchingMode = true);
+    try {
+      final userId = await getUserId();
+      if (userId == null || userId.isEmpty) {
+        throw Exception('User is not available');
+      }
+
+      await saveExperienceMode(userId, normalized);
+      ref.invalidate(preferredExperienceModeProvider);
+
+      if (!mounted) return;
+      final isCustomer = normalized == 'customer';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCustomer
+                ? 'Customer mode enabled. You can book services now.'
+                : 'Host mode enabled. Manage your services and bookings.',
+          ),
+        ),
+      );
+      if (isCustomer) {
+        context.go('/');
+      } else {
+        context.go('/');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not switch mode: $e')));
+    } finally {
+      if (mounted) setState(() => _switchingMode = false);
+    }
   }
 
   void _showLogoutConfirmation(BuildContext context) {
@@ -235,11 +284,11 @@ class _NotificationBellButton extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-                height: 1.1,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            height: 1.1,
+          ),
           textAlign: TextAlign.center,
         ),
       ),
@@ -259,10 +308,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.textTertiary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-            ),
+          color: AppColors.textTertiary,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -277,7 +326,8 @@ class _PremiumProfileCard extends StatelessWidget {
     if (name == null || name.trim().isEmpty) return '?';
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'.toUpperCase();
+    return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+        .toUpperCase();
   }
 
   @override
@@ -289,7 +339,10 @@ class _PremiumProfileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.xl,
+          ),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -318,7 +371,8 @@ class _PremiumProfileCard extends StatelessWidget {
               userAsync.when(
                 data: (user) => _buildContent(context, user?.name, user?.email),
                 loading: () => _buildContent(context, '...', '...'),
-                error: (e, s) => _buildContent(context, 'Guest', 'Not signed in'),
+                error: (e, s) =>
+                    _buildContent(context, 'Guest', 'Not signed in'),
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
@@ -327,12 +381,16 @@ class _PremiumProfileCard extends StatelessWidget {
                   Text(
                     'View profile',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primary),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                 ],
               ),
             ],
@@ -365,10 +423,10 @@ class _PremiumProfileCard extends StatelessWidget {
                 ? Text(
                     _initials(name),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   )
                 : Icon(
                     Icons.person_rounded,
@@ -381,17 +439,17 @@ class _PremiumProfileCard extends StatelessWidget {
         Text(
           name ?? 'Guest',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
-              ),
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 4),
         Text(
           email ?? 'Not signed in',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -404,14 +462,22 @@ class _ProviderExploreCard extends StatelessWidget {
   const _ProviderExploreCard({
     required this.userAsync,
     required this.providerStatusAsync,
+    required this.experienceMode,
+    required this.switchingMode,
     required this.onBecomeHost,
+    required this.onSwitchMode,
+    required this.onGoCustomerBooking,
     required this.onCompleteService,
     required this.onMyServices,
   });
 
   final AsyncValue<CurrentUser?> userAsync;
   final AsyncValue<ProviderStatus?> providerStatusAsync;
+  final String experienceMode;
+  final bool switchingMode;
   final VoidCallback onBecomeHost;
+  final ValueChanged<String> onSwitchMode;
+  final VoidCallback onGoCustomerBooking;
   final VoidCallback onCompleteService;
   final VoidCallback onMyServices;
 
@@ -420,22 +486,115 @@ class _ProviderExploreCard extends StatelessWidget {
     final isProvider = userAsync.valueOrNull?.isProviderRole ?? false;
     if (!isProvider) return _BecomeHostCard(onTap: onBecomeHost);
 
+    final isHostMode = experienceMode == 'host';
     final status = providerStatusAsync.valueOrNull;
     final hasActiveService = status?.hasActiveService ?? false;
+    final hostCard = hasActiveService
+        ? _ExploreCard(
+            title: 'My services',
+            subtitle: 'Manage your offerings and bookings',
+            icon: Icons.work_rounded,
+            onTap: onMyServices,
+          )
+        : _ExploreCard(
+            title: 'Complete your first service',
+            subtitle: 'Add a service to start receiving bookings',
+            icon: Icons.add_business_rounded,
+            onTap: onCompleteService,
+          );
 
-    if (hasActiveService) {
-      return _ExploreCard(
-        title: 'My services',
-        subtitle: 'Manage your offerings and bookings',
-        icon: Icons.work_rounded,
-        onTap: onMyServices,
-      );
-    }
-    return _ExploreCard(
-      title: 'Complete your first service',
-      subtitle: 'Add a service to start receiving bookings',
-      icon: Icons.add_business_rounded,
-      onTap: onCompleteService,
+    final customerCard = _ExploreCard(
+      title: 'Book as customer',
+      subtitle: 'Browse services and place bookings in customer mode',
+      icon: Icons.shopping_bag_rounded,
+      onTap: onGoCustomerBooking,
+    );
+
+    return Column(
+      children: [
+        _ModeSwitchCard(
+          mode: experienceMode,
+          loading: switchingMode,
+          onSwitchMode: onSwitchMode,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        isHostMode ? hostCard : customerCard,
+      ],
+    );
+  }
+}
+
+class _ModeSwitchCard extends StatelessWidget {
+  const _ModeSwitchCard({
+    required this.mode,
+    required this.loading,
+    required this.onSwitchMode,
+  });
+
+  final String mode;
+  final bool loading;
+  final ValueChanged<String> onSwitchMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCustomer = mode == 'customer';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Experience mode',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Switch between customer booking flow and host management tools anytime.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  selected: isCustomer,
+                  label: const Text('Customer mode'),
+                  onSelected: loading ? null : (_) => onSwitchMode('customer'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  selected: !isCustomer,
+                  label: const Text('Host mode'),
+                  onSelected: loading ? null : (_) => onSwitchMode('host'),
+                ),
+              ),
+              if (loading) ...[
+                const SizedBox(width: 8),
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -466,7 +625,10 @@ class _ExploreCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.25), width: 1.2),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.25),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.06),
@@ -505,20 +667,24 @@ class _ExploreCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textTertiary),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.textTertiary,
+              ),
             ],
           ),
         ),
@@ -545,7 +711,10 @@ class _BecomeHostCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.25), width: 1.2),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.25),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.06),
@@ -574,7 +743,11 @@ class _BecomeHostCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
-                child: Icon(Icons.home_work_rounded, color: AppColors.primary, size: 28),
+                child: Icon(
+                  Icons.home_work_rounded,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -584,20 +757,24 @@ class _BecomeHostCard extends StatelessWidget {
                     Text(
                       'Become a host',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Offer your services and get booked',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textTertiary),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: AppColors.textTertiary,
+              ),
             ],
           ),
         ),
@@ -672,7 +849,10 @@ class _PremiumMenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = textColor ?? AppColors.textPrimary;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 6,
+      ),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -688,9 +868,9 @@ class _PremiumMenuTile extends StatelessWidget {
       title: Text(
         label,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
       subtitle: subtitle != null
           ? Padding(
@@ -698,12 +878,18 @@ class _PremiumMenuTile extends StatelessWidget {
               child: Text(
                 subtitle!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: textColor?.withValues(alpha: 0.8) ?? AppColors.textTertiary,
-                    ),
+                  color:
+                      textColor?.withValues(alpha: 0.8) ??
+                      AppColors.textTertiary,
+                ),
               ),
             )
           : null,
-      trailing: Icon(Icons.chevron_right_rounded, color: textColor ?? AppColors.textTertiary, size: 22),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: textColor ?? AppColors.textTertiary,
+        size: 22,
+      ),
       onTap: onTap,
     );
   }
@@ -729,7 +915,10 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 6,
+      ),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -744,17 +933,17 @@ class _NotificationTile extends StatelessWidget {
       ),
       title: Text(
         label,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2),
         child: Text(
           subtitle,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textTertiary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary),
         ),
       ),
       trailing: Switch(
